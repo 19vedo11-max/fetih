@@ -2,12 +2,12 @@ apply plugin: 'com.android.application'
 
 android {
     namespace 'com.vedatmalli.fetih'
-    compileSdk 36
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.vedatmalli.fetih"
         minSdk 24
-        targetSdk 36
+        targetSdk 34
         versionCode 1
         versionName "1.0"
     }
