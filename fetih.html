@@ -1,0 +1,2355 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Fetih — Dünya Fetih Oyunu</title>
+<style>
+  :root {
+    --bg: #05070d;
+    --panel: #131a29;
+    --panel2: #1a2236;
+    --border: #2a3550;
+    --text: #eef1f8;
+    --muted: #93a0ba;
+    --accent: #5b8cff;
+    --glow: #5dc8ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: radial-gradient(circle at 20% 10%, #101828, #04060c 70%);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #setup {
+    margin: auto;
+    background: linear-gradient(160deg, #141d33, #0a0d17);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 40px 46px;
+    text-align: center;
+    max-width: 470px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  #setup h1 { margin-top: 0; font-size: 28px; }
+  #setup p { color: var(--muted); line-height: 1.5; font-size: 13.5px; }
+  .player-count-row { display: flex; gap: 10px; justify-content: center; margin: 20px 0; }
+  .pc-btn {
+    width: 54px; height: 54px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--panel2); color: var(--text); font-size: 20px; cursor: pointer;
+  }
+  .pc-btn.selected { background: var(--accent); border-color: var(--accent); }
+  #startBtn, #hostCreateBtn, #joinBtn {
+    margin-top: 10px; padding: 13px 30px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg,#5b8cff,#8b5bff); color: white; font-size: 16px; cursor: pointer; font-weight: 700;
+  }
+  #startBtn:hover, #hostCreateBtn:hover, #joinBtn:hover { filter: brightness(1.12); }
+  #hostCreateBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .mode-tabs { display: flex; gap: 6px; margin: 18px 0 4px; }
+  .mode-tab {
+    flex: 1; padding: 9px 6px; border-radius: 9px; border: 1px solid var(--border);
+    background: var(--panel2); color: var(--muted); cursor: pointer; font-size: 12.5px; font-weight: 600;
+  }
+  .mode-tab.selected { background: var(--accent); border-color: var(--accent); color: white; }
+  .mode-panel { text-align: center; }
+  .mode-desc { color: var(--muted); font-size: 12.5px; line-height: 1.4; margin: 10px 0; }
+  .net-input {
+    width: 100%; box-sizing: border-box; padding: 10px 12px; margin: 8px 0; border-radius: 9px;
+    border: 1px solid var(--border); background: #0e1424; color: var(--text); font-size: 13.5px;
+  }
+  #hostCreateBtn, #joinBtn { width: 100%; }
+  .ai-toggle {
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+    font-size: 12.5px; color: var(--muted); margin: 14px 0 4px; cursor: pointer;
+  }
+  .ai-toggle input { width: 15px; height: 15px; cursor: pointer; }
+  .room-code-box {
+    margin-top: 14px; padding: 12px; background: #0e1424; border: 1px solid var(--border);
+    border-radius: 10px; font-size: 13px; color: var(--muted);
+  }
+  .room-code-box b { font-size: 20px; letter-spacing: 1px; color: var(--glow); word-break: break-all; }
+  #hostLobbyPlayers { margin-top: 10px; text-align: left; }
+  .lobby-row { font-size: 12.5px; padding: 5px 2px; display: flex; align-items: center; gap: 6px; }
+  .lobby-row.muted { color: var(--muted); font-style: italic; }
+  #netStatusMsg { color: #ff9db3; font-size: 12px; margin-top: 12px; min-height: 14px; }
+  #joinWait { margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+
+  #game { display: none; width: 100%; height: 100%; flex-direction: row; }
+  #mapWrap {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(circle at 50% 30%, #0e2740 0%, #071528 45%, #030710 85%),
+      repeating-linear-gradient(115deg, rgba(120,195,255,0.045) 0px, rgba(120,195,255,0.045) 1.5px, transparent 1.5px, transparent 30px),
+      repeating-linear-gradient(25deg, rgba(120,195,255,0.03) 0px, rgba(120,195,255,0.03) 1.5px, transparent 1.5px, transparent 42px);
+  }
+  svg { width: 96%; height: 96%; }
+  .continent-blob { stroke-width: 3; fill: none; pointer-events: none; }
+  .continent-label { font-size: 13px; font-weight: 800; letter-spacing: 1.5px; pointer-events: none; opacity: 0.8; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+  .territory-poly {
+    stroke: #05070d; stroke-width: 2.4; cursor: default; transition: filter 0.15s;
+    filter: drop-shadow(0 5px 6px rgba(0,0,0,0.55));
+  }
+  .territory-poly.selectable { cursor: pointer; }
+  .territory-poly.selectable:hover { filter: brightness(1.22) drop-shadow(0 5px 6px rgba(0,0,0,0.55)); }
+  .territory-poly.selected { stroke: #fff; stroke-width: 4; filter: drop-shadow(0 0 9px #fff); }
+  .territory-poly-base { stroke: none; opacity: 0.9; pointer-events: none; }
+  .territory-poly-gloss { stroke: none; pointer-events: none; mix-blend-mode: overlay; }
+  .marching-unit { pointer-events: none; text-anchor: middle; }
+  .territory-circle {
+    cursor: pointer; stroke-width: 2; transition: filter 0.15s;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));
+  }
+  .territory-circle.selectable:hover { filter: brightness(1.3) drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }
+  .territory-circle.selected { stroke: #fff; stroke-width: 3.5; filter: drop-shadow(0 0 7px #fff); }
+  .territory-circle.pulse { animation: territoryPulse 0.6s ease; }
+  @keyframes territoryPulse {
+    0% { filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }
+    40% { filter: brightness(2) drop-shadow(0 0 14px #fff); }
+    100% { filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }
+  }
+  .territory-shine { pointer-events: none; }
+  .territory-icon { font-size: 11px; text-anchor: middle; pointer-events: none; }
+  .territory-count { fill: white; font-size: 10.5px; font-weight: 800; text-anchor: middle; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
+  .territory-label { fill: #eef3fb; font-size: 7px; font-weight: 600; text-anchor: middle; pointer-events: none; letter-spacing: 0.2px; paint-order: stroke; stroke: #05070d; stroke-width: 2.4px; stroke-linejoin: round; }
+  .edge-line { stroke: #5dc8ff; stroke-width: 1.1; opacity: 0.32; pointer-events: none; }
+
+  .capture-burst { transform-box: fill-box; transform-origin: center; animation: burstAnim 0.8s ease-out forwards; pointer-events: none; }
+  @keyframes burstAnim { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(3.2); opacity: 0; } }
+  .capture-flag { transform-box: fill-box; transform-origin: center; animation: flagPop 0.9s ease-out forwards; pointer-events: none; }
+  @keyframes flagPop {
+    0% { transform: translateY(0) scale(0.4); opacity: 0; }
+    30% { transform: translateY(-8px) scale(1.3); opacity: 1; }
+    100% { transform: translateY(-22px) scale(1); opacity: 0; }
+  }
+  .clash-spark { transform-box: fill-box; transform-origin: center; animation: clashAnim 0.45s ease-out forwards; pointer-events: none; }
+  @keyframes clashAnim { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.3); opacity: 0; } }
+  .transfer-dot { pointer-events: none; }
+
+  #sidebar {
+    width: 380px; background: var(--panel); border-left: 1px solid var(--border);
+    padding: 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto;
+  }
+  #turnInfo { background: linear-gradient(135deg, #1e2740, #161d30); border-radius: 12px; padding: 13px; border: 1px solid var(--border); }
+  #turnInfo .who { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px rgba(255,255,255,0.25); flex-shrink:0; }
+  #turnInfo .phase { color: var(--accent); font-weight: 700; font-size: 12.5px; margin-top: 4px; }
+  #turnInfo .hint { font-size: 12px; margin-top: 7px; color: #b8c2d9; }
+
+  #missionPanel { background: linear-gradient(135deg,#241a33,#160f22); border: 1px solid #3d2a55; border-radius: 12px; padding: 12px; }
+  #missionPanel .mtitle { font-size: 12px; font-weight: 800; letter-spacing: 1px; color: #c9a8ff; display: flex; justify-content: space-between; align-items: center; }
+  #missionText { font-size: 12.5px; margin-top: 7px; color: #ddd0f5; line-height: 1.4; }
+  #missionText.masked { filter: blur(5px); user-select: none; }
+  #missionToggle { padding: 4px 9px; font-size: 11px; }
+
+  #unitPanel { display: none; background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; padding: 11px; }
+  #unitPanel .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .unit-row { display: flex; gap: 6px; }
+  .unit-btn { flex: 1; padding: 8px 4px; border-radius: 8px; border: 1px solid var(--border); background: #141b2c; color: var(--text); cursor: pointer; font-size: 11.5px; text-align: center; }
+  .unit-btn.selected { background: var(--accent); border-color: var(--accent); font-weight: 700; }
+  .unit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn {
+    padding: 9px 13px; border-radius: 9px; border: 1px solid var(--border);
+    background: var(--panel2); color: var(--text); cursor: pointer; font-size: 13px;
+  }
+  .btn.primary { background: linear-gradient(135deg,#5b8cff,#8b5bff); border-color: transparent; font-weight: 700; }
+  .btn.danger { background: #3a2030; border-color: #5c2c40; color: #ff9db3; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  #cardsPanel { background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; padding: 11px; }
+  #cardsPanel .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display:flex; justify-content:space-between; }
+  #cardList { display: flex; flex-wrap: wrap; gap: 6px; min-height: 26px; }
+  .card-chip { border: 1px solid var(--border); background: #141b2c; border-radius: 8px; padding: 5px 8px; font-size: 11px; cursor: pointer; display:flex; align-items:center; gap:4px; }
+  .card-chip.selected { background: var(--accent); border-color: var(--accent); }
+  #tradeBtn { margin-top: 8px; width: 100%; }
+  #tradeValueHint { font-size: 10.5px; color: var(--muted); margin-top: 6px; }
+
+  #log { background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 11.5px; height: 130px; overflow-y: auto; flex: 1; }
+  #log div { margin-bottom: 6px; line-height: 1.4; color: #c6cee0; }
+  #log div.win { color: #ffd76b; font-weight: 700; }
+
+  #players { display: flex; flex-direction: column; gap: 5px; }
+  .p-row { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 6px 8px; border-radius: 8px; background: var(--panel2); }
+  .p-row.dead { opacity: 0.35; text-decoration: line-through; }
+  .p-row .terr-count { margin-left: auto; color: var(--muted); }
+  .civ-badge { font-size: 13px; line-height: 1; }
+
+  #moveOverlay, #attackOverlay {
+    position: fixed; inset: 0; background: rgba(4,6,12,0.65); display: none;
+    align-items: center; justify-content: center; z-index: 10; backdrop-filter: blur(2px);
+  }
+  #moveBox, #attackBox {
+    background: linear-gradient(160deg, #1c2540, #12172a); border: 1px solid var(--border); border-radius: 16px;
+    padding: 26px; width: 340px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  #moveBox input { width: 100%; margin: 12px 0; }
+
+  #attackBox h3 { margin: 0 0 6px; font-size: 17px; }
+  #attackBox .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 16px; }
+  .dice-section { margin: 10px 0; }
+  .dice-section .label { font-size: 11px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+  .dice-row { display: flex; gap: 10px; justify-content: center; }
+  .die {
+    font-size: 26px; line-height: 1; width: 44px; height: 44px; border-radius: 9px;
+    display: inline-flex; align-items: center; justify-content: center; transition: transform 0.1s;
+  }
+  .die.atk-die { background: #14161c; color: #f6f6f6; border: 1px solid #000; }
+  .die.def-die { background: #f3f3f3; color: #14161c; border: 1px solid #cfcfcf; }
+  .dice-row.rolling .die { animation: diceShake 0.15s linear infinite; }
+  @keyframes diceShake {
+    0%, 100% { transform: translateX(0) rotate(0); }
+    25% { transform: translateX(-3px) rotate(-5deg); }
+    75% { transform: translateX(3px) rotate(5deg); }
+  }
+  .die.win { box-shadow: 0 0 0 3px #4ade80, 0 0 10px rgba(74,222,128,0.7); animation: dieWin 0.5s ease; }
+  @keyframes dieWin { 0% { transform: scale(1); } 50% { transform: scale(1.3); filter: brightness(1.4); } 100% { transform: scale(1); } }
+  .die.lose { animation: dieLose 0.45s ease forwards; }
+  @keyframes dieLose {
+    0% { transform: scale(1); opacity: 1; }
+    40% { transform: scale(1.1); filter: brightness(0.6); }
+    100% { transform: scale(0.85); opacity: 0.4; }
+  }
+  #atkResultText { margin-top: 14px; font-size: 13.5px; min-height: 20px; color: #ffd76b; font-weight: 600; }
+  #attackBox .btn-row { justify-content: center; margin-top: 16px; }
+
+  #victory {
+    display: none; position: fixed; inset: 0; background: rgba(4,6,12,0.92);
+    align-items: center; justify-content: center; flex-direction: column; z-index: 20; text-align: center; padding: 20px;
+  }
+  #victory h1 { font-size: 38px; max-width: 700px; }
+  #victory .sub { color: var(--muted); font-size: 14px; max-width: 600px; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <h1>🌍 Fetih</h1>
+  <p>Risk'ten ilham alan, 42 bölgeli dünya fetih oyunu. Piyade/süvari/topçu birlikleri, Risk kartları, zar simülasyonu ve her oyuncuya özel <b>Enigma</b> gizli görevi var — görevini tamamlayan ya da tüm dünyayı fetheden kazanır.</p>
+
+  <div class="mode-tabs" id="modeTabs">
+    <button class="mode-tab selected" data-mode="hotseat">🖥️ Bu Cihazda</button>
+    <button class="mode-tab" data-mode="host">🌐 Oda Kur</button>
+    <button class="mode-tab" data-mode="join">🔑 Odaya Katıl</button>
+  </div>
+
+  <div id="hotseatPanel" class="mode-panel">
+    <p class="mode-desc">Aynı ekrandan sırayla oynanır. Kaç oyuncu olacaksınız?</p>
+    <div class="player-count-row" id="pcRow">
+      <button class="pc-btn" data-n="2">2</button>
+      <button class="pc-btn" data-n="3">3</button>
+      <button class="pc-btn" data-n="4">4</button>
+    </div>
+    <label class="ai-toggle"><input type="checkbox" id="aiToggle"> 🤖 Rakiplerim yapay zeka olsun (tek başına oyna)</label>
+    <button id="startBtn">Oyunu Başlat</button>
+  </div>
+
+  <div id="hostPanel" class="mode-panel" style="display:none;">
+    <p class="mode-desc">Bir oda kur, arkadaşların oda koduyla kendi cihazlarından katılsın.</p>
+    <input type="text" class="net-input" id="hostNameInput" placeholder="Adın" maxlength="20">
+    <div class="player-count-row" id="hostPcRow">
+      <button class="pc-btn" data-n="2">2</button>
+      <button class="pc-btn" data-n="3">3</button>
+      <button class="pc-btn" data-n="4">4</button>
+    </div>
+    <button id="hostCreateBtn">Oda Kur</button>
+    <div id="hostLobby" style="display:none;">
+      <div class="room-code-box">Oda Kodu:<br><b id="roomCodeText">…</b><br>
+        <button class="btn" id="copyRoomCodeBtn">Kodu Kopyala</button>
+        <button class="btn" id="copyInviteLinkBtn">Davet Linkini Kopyala</button>
+      </div>
+      <div id="hostLobbyPlayers"></div>
+      <button id="hostStartBtn" class="btn primary" disabled style="width:100%;margin-top:10px;">Oyunu Başlat</button>
+    </div>
+  </div>
+
+  <div id="joinPanel" class="mode-panel" style="display:none;">
+    <p class="mode-desc">Oda kurucusunun sana verdiği kodu gir.</p>
+    <input type="text" class="net-input" id="joinNameInput" placeholder="Adın" maxlength="20">
+    <input type="text" class="net-input" id="joinCodeInput" placeholder="Oda Kodu">
+    <button id="joinBtn">Katıl</button>
+    <div id="joinWait" style="display:none;"><p id="clientWaitText">Bağlanılıyor…</p></div>
+  </div>
+
+  <div id="netStatusMsg"></div>
+</div>
+
+<div id="game">
+  <div id="mapWrap">
+    <svg viewBox="0 0 1000 520" id="mapSvg"></svg>
+  </div>
+  <div id="sidebar">
+    <div id="turnInfo">
+      <div class="who"><span class="dot" id="turnDot"></span><span id="turnName"></span></div>
+      <div class="phase" id="turnPhase"></div>
+      <div class="hint" id="turnHint"></div>
+    </div>
+
+    <div id="missionPanel">
+      <div class="mtitle"><span>🔒 ENIGMA — Gizli Görevin</span><button class="btn" id="missionToggle">Göster</button></div>
+      <div id="missionText" class="masked"></div>
+    </div>
+
+    <div id="unitPanel">
+      <div class="label">Yerleştirilecek Birim Türü</div>
+      <div class="unit-row">
+        <button class="unit-btn" id="unitInf" data-u="inf">🪖 Piyade<br>1 asker</button>
+        <button class="unit-btn" id="unitCav" data-u="cav">🐎 Süvari<br>5 asker</button>
+        <button class="unit-btn" id="unitArt" data-u="art">💣 Topçu<br>10 asker</button>
+      </div>
+    </div>
+
+    <div class="btn-row" id="phaseButtons"></div>
+
+    <div id="cardsPanel">
+      <div class="label"><span>Kartların</span><span id="cardCount"></span></div>
+      <div id="cardList"></div>
+      <button class="btn primary" id="tradeBtn">Kartları Değiştir</button>
+      <div id="tradeValueHint"></div>
+    </div>
+
+    <div id="players"></div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<div id="moveOverlay">
+  <div id="moveBox">
+    <div id="moveText">Kaç asker taşınsın?</div>
+    <input type="range" id="moveSlider" min="1" max="1" value="1">
+    <div id="moveVal" style="font-size:22px;font-weight:700;">1</div>
+    <button class="btn primary" id="moveConfirm">Taşı</button>
+  </div>
+</div>
+
+<div id="attackOverlay">
+  <div id="attackBox">
+    <h3 id="atkOverlayTitle">Saldırı</h3>
+    <div class="sub" id="atkOverlaySub"></div>
+    <div class="dice-section">
+      <div class="label">⚫ Saldıran Zarları (siyah)</div>
+      <div class="dice-row" id="atkDiceRow"></div>
+    </div>
+    <div class="dice-section">
+      <div class="label">⚪ Savunan Zarları (beyaz)</div>
+      <div class="dice-row" id="defDiceRow"></div>
+    </div>
+    <div id="atkResultText"></div>
+    <div class="btn-row">
+      <button class="btn primary" id="rollBtn">🎲 Zar At!</button>
+      <button class="btn" id="continueBtn" style="display:none;">Devam Et</button>
+      <button class="btn danger" id="cancelAtkBtn">Vazgeç</button>
+    </div>
+  </div>
+</div>
+
+<div id="victory">
+  <h1 id="victoryText"></h1>
+  <div class="sub" id="victorySub"></div>
+  <button class="btn primary" onclick="location.reload()">Yeniden Oyna</button>
+</div>
+
+<!-- Çevrimiçi çok oyunculu mod için: WebRTC eş-eşe (peer-to-peer) bağlantı
+     kütüphanesi. Kendi sunucumuz yok — PeerJS'in ücretsiz, herkese açık
+     eşleştirme sunucusu üzerinden iki tarayıcı birbirini bulur, sonrasında
+     oyun verisi doğrudan tarayıcılar arasında akar. Sadece çevrimiçi mod
+     için internet bağlantısı gerektirir; aynı ekrandan (hotseat) oynamak
+     bu kütüphane olmadan da çalışır. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+<script>
+const SVGNS = "http://www.w3.org/2000/svg";
+
+/* ============ DÜNYA HARİTASI VERİSİ (klasik Risk haritasına yakın) ============ */
+const TERRITORIES = [
+  // Kuzey Amerika
+  {id:"ALA",name:"Alaska (ABD)",label:"Alaska",cont:"NA",x:90,y:70},
+  {id:"NWT",name:"Kanada (Yukon)",label:"Yukon",cont:"NA",x:200,y:60},
+  {id:"GRE",name:"Grönland (Danimarka)",label:"Grönland",cont:"NA",x:330,y:45},
+  {id:"ALB",name:"Kanada (Alberta)",label:"Alberta",cont:"NA",x:150,y:140},
+  {id:"ONT",name:"Kanada (Ontario)",label:"Ontario",cont:"NA",x:240,y:140},
+  {id:"QUE",name:"Kanada (Québec)",label:"Québec",cont:"NA",x:320,y:130},
+  {id:"WUS",name:"ABD (Batı)",label:"Batı ABD",cont:"NA",x:150,y:220},
+  {id:"EUS",name:"ABD (Doğu)",label:"Doğu ABD",cont:"NA",x:250,y:220},
+  {id:"CAM",name:"Meksika",label:"Meksika",cont:"NA",x:190,y:290},
+  // Güney Amerika
+  {id:"VEN",name:"Venezuela",label:"Venezuela",cont:"SA",x:300,y:340},
+  {id:"BRA",name:"Brezilya",label:"Brezilya",cont:"SA",x:340,y:400},
+  {id:"PER",name:"Peru",label:"Peru",cont:"SA",x:270,y:410},
+  {id:"ARG",name:"Arjantin",label:"Arjantin",cont:"SA",x:300,y:480},
+  // Avrupa
+  {id:"ICE",name:"İzlanda",label:"İzlanda",cont:"EU",x:420,y:60},
+  {id:"GBR",name:"Birleşik Krallık",label:"B. Krallık",cont:"EU",x:430,y:120},
+  {id:"SCA",name:"Norveç",label:"Norveç",cont:"EU",x:500,y:55},
+  {id:"NEU",name:"Polonya",label:"Polonya",cont:"EU",x:490,y:140},
+  {id:"WEU",name:"Fransa",label:"Fransa",cont:"EU",x:430,y:175},
+  {id:"SEU",name:"İtalya",label:"İtalya",cont:"EU",x:500,y:195},
+  {id:"UKR",name:"Ukrayna",label:"Ukrayna",cont:"EU",x:570,y:110},
+  // Afrika
+  {id:"NAF",name:"Cezayir",label:"Cezayir",cont:"AF",x:460,y:270},
+  {id:"EGY",name:"Mısır",label:"Mısır",cont:"AF",x:540,y:260},
+  {id:"EAF",name:"Etiyopya",label:"Etiyopya",cont:"AF",x:545,y:340},
+  {id:"CON",name:"Kongo DC",label:"Kongo",cont:"AF",x:470,y:365},
+  {id:"SAF",name:"Güney Afrika",label:"G. Afrika",cont:"AF",x:480,y:450},
+  {id:"MAD",name:"Madagaskar",label:"Madagaskar",cont:"AF",x:575,y:440},
+  // Asya
+  {id:"URA",name:"Rusya (Ural)",label:"Ural",cont:"AS",x:610,y:90},
+  {id:"SIB",name:"Rusya (Sibirya)",label:"Sibirya",cont:"AS",x:680,y:70},
+  {id:"YAK",name:"Rusya (Yakutsk)",label:"Yakutsk",cont:"AS",x:760,y:50},
+  {id:"KAM",name:"Rusya (Kamçatka)",label:"Kamçatka",cont:"AS",x:860,y:70},
+  {id:"IRK",name:"Rusya (İrkutsk)",label:"İrkutsk",cont:"AS",x:720,y:130},
+  {id:"MON",name:"Moğolistan",label:"Moğolistan",cont:"AS",x:760,y:150},
+  {id:"JAP",name:"Japonya",label:"Japonya",cont:"AS",x:880,y:160},
+  {id:"AFG",name:"Afganistan",label:"Afganistan",cont:"AS",x:610,y:180},
+  {id:"CHI",name:"Çin",label:"Çin",cont:"AS",x:720,y:210},
+  {id:"MDE",name:"Suudi Arabistan",label:"S. Arabistan",cont:"AS",x:600,y:240},
+  {id:"IND",name:"Hindistan",label:"Hindistan",cont:"AS",x:670,y:280},
+  {id:"SIA",name:"Tayland",label:"Tayland",cont:"AS",x:740,y:270},
+  // Okyanusya
+  {id:"IDN",name:"Endonezya",label:"Endonezya",cont:"OC",x:760,y:340},
+  {id:"NGU",name:"Papua Yeni Gine",label:"P. Y. Gine",cont:"OC",x:850,y:340},
+  {id:"WAU",name:"Avustralya (Batı)",label:"B. Avustralya",cont:"OC",x:780,y:420},
+  {id:"EAU",name:"Avustralya (Doğu)",label:"D. Avustralya",cont:"OC",x:870,y:420},
+];
+
+const EDGES = [
+  // Kuzey Amerika
+  ["ALA","NWT"],["NWT","ALB"],["NWT","ONT"],["NWT","GRE"],["GRE","ONT"],["GRE","QUE"],
+  ["ALB","ONT"],["ALB","WUS"],["ONT","QUE"],["ONT","WUS"],["ONT","EUS"],["QUE","EUS"],
+  ["WUS","EUS"],["WUS","CAM"],["EUS","CAM"],
+  ["ALA","KAM"],["GRE","ICE"],["CAM","VEN"],
+  // Güney Amerika
+  ["VEN","BRA"],["VEN","PER"],["BRA","PER"],["BRA","ARG"],["PER","ARG"],["BRA","NAF"],
+  // Avrupa
+  ["ICE","GBR"],["ICE","SCA"],["GBR","WEU"],["GBR","NEU"],["GBR","SCA"],["SCA","NEU"],
+  ["SCA","UKR"],["NEU","UKR"],["NEU","SEU"],["NEU","WEU"],["WEU","SEU"],["SEU","UKR"],
+  ["WEU","NAF"],["SEU","NAF"],["SEU","EGY"],["SEU","MDE"],
+  ["UKR","URA"],["UKR","AFG"],["UKR","MDE"],
+  // Afrika
+  ["NAF","EGY"],["NAF","EAF"],["NAF","CON"],["EGY","EAF"],["EGY","MDE"],
+  ["EAF","CON"],["EAF","SAF"],["EAF","MAD"],["EAF","MDE"],["CON","SAF"],["SAF","MAD"],
+  // Asya
+  ["URA","SIB"],["URA","CHI"],["URA","AFG"],["SIB","YAK"],["SIB","IRK"],["SIB","MON"],["SIB","CHI"],
+  ["YAK","KAM"],["YAK","IRK"],["KAM","IRK"],["KAM","MON"],["KAM","JAP"],["IRK","MON"],
+  ["MON","JAP"],["MON","CHI"],["AFG","CHI"],["AFG","MDE"],["AFG","IND"],
+  ["CHI","MDE"],["CHI","IND"],["CHI","SIA"],["MDE","IND"],["IND","SIA"],
+  // Okyanusya
+  ["IDN","NGU"],["IDN","WAU"],["NGU","WAU"],["NGU","EAU"],["WAU","EAU"],["IDN","SIA"],
+];
+
+const CONTINENTS = {
+  NA: {name:"Kuzey Amerika", color:"#3b82f6", bonus:5},
+  SA: {name:"Güney Amerika", color:"#22c55e", bonus:2},
+  EU: {name:"Avrupa",        color:"#a855f7", bonus:5},
+  AF: {name:"Afrika",        color:"#f97316", bonus:3},
+  AS: {name:"Asya",          color:"#eab308", bonus:7},
+  OC: {name:"Okyanusya",     color:"#06b6d4", bonus:2},
+};
+
+const PLAYER_COLORS = [
+  {name:"Kırmızı", color:"#ef4444"},
+  {name:"Mavi", color:"#3b82f6"},
+  {name:"Yeşil", color:"#22c55e"},
+  {name:"Sarı", color:"#eab308"},
+];
+
+// Her oyuncu sırasına eşlik eden eski bir uygarlık: isim ve simge (sidebar,
+// oyuncu adları, sıra göstergesi ve lobide kullanılır — haritadaki bölgelere
+// basılmaz, karışıklık olmasın diye).
+const CIVILIZATIONS = [
+  {name:"Vikingler", icon:"⚔️"},
+  {name:"Mayalar", icon:"🌞"},
+  {name:"Romalılar", icon:"🦅"},
+  {name:"Mısırlılar", icon:"☥"},
+];
+
+const DICE_GLYPH = ['', '⚀','⚁','⚂','⚃','⚄','⚅'];
+function diceGlyph(n) { return DICE_GLYPH[n] || '⚀'; }
+
+const UNIT_VALUE = {inf:1, cav:5, art:10};
+const UNIT_NAME = {inf:'Piyade', cav:'Süvari', art:'Topçu'};
+const UNIT_ICON = {inf:'🪖', cav:'🐎', art:'💣'};
+const CARD_ICON = {inf:'🪖', cav:'🐎', art:'💣', wild:'🃏'};
+
+const MISSION_POOL = ['NA_AF','AS_SA','EU_OC_SA','T24','T22_2'];
+
+/* ---------- Renk yardımcıları (3D gradyanlar için) ---------- */
+function shadeColor(hex, percent) {
+  const num = parseInt(hex.slice(1), 16);
+  const t = percent < 0 ? 0 : 255;
+  const p = percent < 0 ? -percent : percent;
+  const R = num >> 16, G = (num >> 8) & 0x00FF, B = num & 0x0000FF;
+  const newR = Math.round((t - R) * p) + R;
+  const newG = Math.round((t - G) * p) + G;
+  const newB = Math.round((t - B) * p) + B;
+  return "#" + (0x1000000 + newR * 0x10000 + newG * 0x100 + newB).toString(16).slice(1);
+}
+
+/* ---------- Oyun durumu ---------- */
+let state = null;
+
+function buildAdjacency() {
+  const adj = {};
+  TERRITORIES.forEach(t => adj[t.id] = new Set());
+  EDGES.forEach(([a,b]) => { adj[a].add(b); adj[b].add(a); });
+  return adj;
+}
+const ADJ = buildAdjacency();
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildDeck() {
+  const types = ['inf','cav','art'];
+  const deck = TERRITORIES.map((t, i) => ({type: types[i % 3], territory: t.id}));
+  deck.push({type:'wild', territory:null});
+  deck.push({type:'wild', territory:null});
+  return shuffle(deck);
+}
+
+/* ---------- Enigma gizli görevler ---------- */
+function ownsContinent(pid, code) {
+  return TERRITORIES.filter(t => t.cont === code).every(t => state.terr[t.id].owner === pid);
+}
+
+function assignMissions() {
+  state.players.forEach(pl => {
+    const useHunter = state.players.length >= 2 && Math.random() < 0.35;
+    if (useHunter) {
+      const others = state.players.filter(o => o.id !== pl.id);
+      const target = others[Math.floor(Math.random() * others.length)];
+      pl.mission = {type: 'hunter', targetId: target.id};
+    } else {
+      const type = MISSION_POOL[Math.floor(Math.random() * MISSION_POOL.length)];
+      pl.mission = {type};
+    }
+  });
+}
+
+function missionText(pl) {
+  const m = pl.mission;
+  if (!m) return '';
+  switch (m.type) {
+    case 'NA_AF': return 'Kuzey Amerika ve Afrika kıtalarının tamamını ele geçir.';
+    case 'AS_SA': return 'Asya ve Güney Amerika kıtalarının tamamını ele geçir.';
+    case 'EU_OC_SA': return 'Avrupa, Okyanusya ve Güney Amerika kıtalarının tamamını ele geçir.';
+    case 'T24': return 'Toplamda en az 24 bölgeyi ele geçir.';
+    case 'T22_2': return 'Aynı anda en az 22 bölgeye (her birinde en az 2 asker olacak şekilde) sahip ol.';
+    case 'hunter': return `${state.players[m.targetId].name} oyuncusunu tamamen yok et (tüm bölgelerini ele geçirerek elemelisin).`;
+  }
+  return '';
+}
+
+function checkMission(pl) {
+  const m = pl.mission;
+  if (!m) return false;
+  switch (m.type) {
+    case 'NA_AF': return ownsContinent(pl.id,'NA') && ownsContinent(pl.id,'AF');
+    case 'AS_SA': return ownsContinent(pl.id,'AS') && ownsContinent(pl.id,'SA');
+    case 'EU_OC_SA': return ownsContinent(pl.id,'EU') && ownsContinent(pl.id,'OC') && ownsContinent(pl.id,'SA');
+    case 'T24': return ownedTerritories(pl.id).length >= 24;
+    // 22 kasıtlı: 2 oyunculu oyunda başlangıçta herkes 21 bölgeye sahip oluyor,
+    // eşik 21'in altında olursa görev oyun başında otomatik tamamlanmış olurdu.
+    case 'T22_2': return ownedTerritories(pl.id).filter(id => state.terr[id].armies >= 2).length >= 22;
+    case 'hunter': return !state.players[m.targetId].alive;
+  }
+  return false;
+}
+
+function checkAllMissions() {
+  if (!state || state.gameOver) return false;
+  const cp = currentPlayer();
+  const order = [cp, ...state.players.filter(p => p.id !== cp.id)];
+  for (const pl of order) {
+    if (!pl.alive) continue;
+    if (checkMission(pl)) {
+      state.gameOver = true;
+      state.winnerInfo = { playerId: pl.id, viaMission: true };
+      showVictory(pl, true);
+      return true;
+    }
+  }
+  const uniqueOwners = new Set(Object.values(state.terr).map(t => t.owner));
+  if (uniqueOwners.size === 1) {
+    state.gameOver = true;
+    state.winnerInfo = { playerId: [...uniqueOwners][0], viaMission: false };
+    showVictory(state.players[[...uniqueOwners][0]], false);
+    return true;
+  }
+  return false;
+}
+
+function initGame(numPlayers, customNames, vsAI) {
+  const players = PLAYER_COLORS.slice(0, numPlayers).map((p, i) => {
+    const isAI = !!(vsAI && i > 0); // 0. oyuncu her zaman insan; gerisi yapay zeka
+    const civ = CIVILIZATIONS[i % CIVILIZATIONS.length];
+    const base = (customNames && customNames[i]) ? `${customNames[i]} (${p.name})` : "Oyuncu " + (i + 1) + " (" + p.name + ")";
+    return {
+      id: i,
+      name: base + (isAI ? ' 🤖' : ''),
+      color: p.color, alive: true, hand: [], isAI,
+      civ,
+    };
+  });
+
+  const terrState = {};
+  TERRITORIES.forEach(t => terrState[t.id] = {owner: null, armies: 0});
+
+  const shuffled = shuffle(TERRITORIES.map(t => t.id));
+  shuffled.forEach((id, idx) => {
+    terrState[id].owner = idx % numPlayers;
+    terrState[id].armies = 3;
+  });
+
+  state = {
+    players,
+    terr: terrState,
+    turnOrder: players.map(p => p.id),
+    currentIdx: 0,
+    phase: "reinforce", // reinforce | attack | fortify
+    armiesToPlace: 0,
+    selected: null,
+    fortifyUsed: false,
+    pendingAttack: null,
+    pendingMove: null,
+    selectedUnit: 'inf',
+    deck: buildDeck(),
+    discard: [],
+    cardTradeCount: 0,
+    capturedThisTurn: false,
+    selectedCards: [],
+    missionRevealed: false,
+    gameOver: false,
+    winnerInfo: null,
+    logLines: [],
+  };
+
+  assignMissions();
+  beginReinforcePhase();
+  render();
+}
+
+function currentPlayer() { return state.players[state.turnOrder[state.currentIdx]]; }
+function ownedTerritories(playerId) { return Object.keys(state.terr).filter(id => state.terr[id].owner === playerId); }
+function nameOf(id) { return TERRITORIES.find(t => t.id === id).name; }
+function terrCoord(id) { return TERRITORIES.find(t => t.id === id); }
+
+function computeReinforcements(playerId) {
+  const owned = ownedTerritories(playerId);
+  let armies = Math.max(1, Math.floor(owned.length / 3));
+  Object.keys(CONTINENTS).forEach(c => {
+    if (ownsContinent(playerId, c)) armies += CONTINENTS[c].bonus;
+  });
+  return armies;
+}
+
+function beginReinforcePhase() {
+  const p = currentPlayer();
+  state.phase = "reinforce";
+  state.armiesToPlace = computeReinforcements(p.id);
+  state.selected = null;
+  state.fortifyUsed = false;
+  state.selectedUnit = 'inf';
+  state.capturedThisTurn = false;
+  state.selectedCards = [];
+  state.missionRevealed = false;
+  log(`— ${p.name} sırası: takviye fazı (+${state.armiesToPlace} asker) —`);
+}
+
+// Log satırları paylaşılan state içinde tutulur — böylece çevrimiçi modda
+// ana bilgisayarın (host) ürettiği log mesajları diğer oyunculara da
+// senkronize olur (renderLog(), her state güncellemesinde çağrılır).
+function log(msg, cls) {
+  if (state) {
+    if (!state.logLines) state.logLines = [];
+    state.logLines.push({ msg, cls: cls || null });
+    if (state.logLines.length > 300) state.logLines.splice(0, state.logLines.length - 300);
+  }
+  renderLog();
+}
+
+function renderLog() {
+  const div = document.getElementById("log");
+  if (!div) return;
+  div.innerHTML = "";
+  if (!state || !state.logLines) return;
+  state.logLines.forEach(({ msg, cls }) => {
+    const line = document.createElement("div");
+    if (cls) line.className = cls;
+    line.textContent = msg;
+    div.appendChild(line);
+  });
+  div.scrollTop = div.scrollHeight;
+}
+
+function rollDice(n) {
+  const r = [];
+  for (let i = 0; i < n; i++) r.push(1 + Math.floor(Math.random() * 6));
+  return r.sort((a,b) => b - a);
+}
+
+function decompose(total) {
+  const art = Math.floor(total / 10);
+  let rem = total % 10;
+  const cav = Math.floor(rem / 5);
+  rem = rem % 5;
+  const inf = rem;
+  return {art, cav, inf};
+}
+
+/* ---------- Kartlar ---------- */
+function drawCard(player) {
+  if (state.deck.length === 0) {
+    if (state.discard.length === 0) return;
+    state.deck = shuffle(state.discard);
+    state.discard = [];
+  }
+  const card = state.deck.pop();
+  player.hand.push(card);
+  const label = card.type === 'wild' ? 'Joker' : `${CARD_ICON[card.type]} ${nameOf(card.territory)}`;
+  log(`🃏 ${player.name} bir kart kazandı: ${label}.`);
+}
+
+function isValidSet(cards) {
+  if (cards.length !== 3) return false;
+  const wilds = cards.filter(c => c.type === 'wild').length;
+  if (wilds > 0) return true;
+  const types = cards.map(c => c.type);
+  const allSame = types.every(t => t === types[0]);
+  const allDiff = new Set(types).size === 3;
+  return allSame || allDiff;
+}
+
+function tradeValue(n) {
+  const table = [4,6,8,10,12,15];
+  if (n < table.length) return table[n];
+  return 15 + (n - 5) * 5;
+}
+
+function toggleCardSelect(idx) {
+  const i = state.selectedCards.indexOf(idx);
+  if (i >= 0) state.selectedCards.splice(i, 1);
+  else if (state.selectedCards.length < 3) state.selectedCards.push(idx);
+  render();
+}
+
+function doTrade() {
+  const p = currentPlayer();
+  if (state.phase !== 'reinforce') return;
+  const idxs = state.selectedCards.slice();
+  const cards = idxs.map(i => p.hand[i]);
+  if (!isValidSet(cards)) return;
+  const bonus = tradeValue(state.cardTradeCount);
+  state.cardTradeCount++;
+  idxs.slice().sort((a,b) => b - a).forEach(i => { state.discard.push(p.hand[i]); p.hand.splice(i, 1); });
+  state.armiesToPlace += bonus;
+  log(`🃏 ${p.name} kart takas etti: +${bonus} asker!`, 'win');
+  cards.forEach(c => {
+    if (c.territory && state.terr[c.territory] && state.terr[c.territory].owner === p.id) {
+      state.terr[c.territory].armies += 2;
+      log(`   Bonus: ${nameOf(c.territory)} bölgesine +2 asker (kart eşleşmesi).`);
+    }
+  });
+  state.selectedCards = [];
+  render();
+}
+
+/* ---------- Bağlantı kontrolü (güçlendirme için zincir) ---------- */
+function reachableOwnedFrom(srcId, ownerId) {
+  const seen = new Set([srcId]);
+  const stack = [srcId];
+  while (stack.length) {
+    const cur = stack.pop();
+    for (const n of ADJ[cur]) {
+      if (!seen.has(n) && state.terr[n].owner === ownerId) {
+        seen.add(n);
+        stack.push(n);
+      }
+    }
+  }
+  return seen;
+}
+
+/* ---------- Görsel efektler ---------- */
+function pulseTerritory(id) {
+  const el = document.querySelector(`#mapSvg circle[data-id="${id}"]`);
+  if (!el) return;
+  el.classList.remove('pulse');
+  void el.offsetWidth; // reflow, animasyonu yeniden tetikler
+  el.classList.add('pulse');
+  setTimeout(() => el.classList.remove('pulse'), 650);
+}
+
+function spawnCaptureEffect(x, y, color, tgtId) {
+  pulseTerritory(tgtId);
+  const svg = document.getElementById('mapSvg');
+  if (!svg) return;
+  for (let i = 0; i < 2; i++) {
+    const ring = document.createElementNS(SVGNS, 'circle');
+    ring.setAttribute('cx', x); ring.setAttribute('cy', y); ring.setAttribute('r', 16);
+    ring.setAttribute('fill', 'none');
+    ring.setAttribute('stroke', color);
+    ring.setAttribute('stroke-width', '3');
+    ring.classList.add('capture-burst');
+    ring.style.animationDelay = (i * 130) + 'ms';
+    svg.appendChild(ring);
+    setTimeout(() => ring.remove(), 1000 + i * 130);
+  }
+  const flag = document.createElementNS(SVGNS, 'text');
+  flag.setAttribute('x', x); flag.setAttribute('y', y - 26);
+  flag.setAttribute('text-anchor', 'middle');
+  flag.setAttribute('font-size', '20');
+  flag.textContent = '🏳️';
+  flag.classList.add('capture-flag');
+  svg.appendChild(flag);
+  setTimeout(() => flag.remove(), 950);
+}
+
+function spawnClashEffect(x, y, id) {
+  pulseTerritory(id);
+  const svg = document.getElementById('mapSvg');
+  if (!svg) return;
+  const spark = document.createElementNS(SVGNS, 'circle');
+  spark.setAttribute('cx', x); spark.setAttribute('cy', y); spark.setAttribute('r', 14);
+  spark.setAttribute('fill', 'none');
+  spark.setAttribute('stroke', '#ff5555');
+  spark.setAttribute('stroke-width', '3');
+  spark.classList.add('clash-spark');
+  svg.appendChild(spark);
+  setTimeout(() => spark.remove(), 500);
+}
+
+// Sahip olunan bölgelerden geçen en kısa zinciri bulur (güçlendirme
+// hareketinin haritada hangi yoldan yürüyeceğini belirlemek için).
+function findOwnedPath(srcId, tgtId, ownerId) {
+  if (srcId === tgtId) return [srcId];
+  const visited = new Set([srcId]);
+  const parentMap = {};
+  const queue = [srcId];
+  while (queue.length) {
+    const cur = queue.shift();
+    if (cur === tgtId) break;
+    for (const n of ADJ[cur]) {
+      if (!visited.has(n) && state.terr[n].owner === ownerId) {
+        visited.add(n);
+        parentMap[n] = cur;
+        queue.push(n);
+      }
+    }
+  }
+  if (!visited.has(tgtId)) return null;
+  const path = [tgtId];
+  let cur = tgtId;
+  while (cur !== srcId) { cur = parentMap[cur]; path.push(cur); }
+  return path.reverse();
+}
+
+// coords dizisindeki çok-parçalı yol üzerinde, t (0..1) oranındaki noktayı
+// (parça uzunluklarına göre orantılı) bulur.
+function pointAlongPath(coords, t) {
+  const segLens = [];
+  let total = 0;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const dx = coords[i+1][0]-coords[i][0], dy = coords[i+1][1]-coords[i][1];
+    const len = Math.sqrt(dx*dx + dy*dy);
+    segLens.push(len); total += len;
+  }
+  if (total === 0) return coords[0];
+  let target = t * total;
+  for (let i = 0; i < segLens.length; i++) {
+    if (target <= segLens[i] || i === segLens.length - 1) {
+      const localT = segLens[i] > 0 ? Math.min(1, target / segLens[i]) : 1;
+      const [x1,y1] = coords[i], [x2,y2] = coords[i+1];
+      return [x1 + (x2-x1)*localT, y1 + (y2-y1)*localT];
+    }
+    target -= segLens[i];
+  }
+  return coords[coords.length - 1];
+}
+
+// Küçük asker figürlerini (🪖) verilen bölge zinciri boyunca gerçekten
+// yürütür — hem saldırı hücumunda hem güçlendirme transferinde kullanılır.
+function spawnMarchingUnits(pathIds, color, count) {
+  if (!pathIds || pathIds.length < 2) return;
+  const coords = pathIds.map(id => { const tc = terrCoord(id); return [tc.x, tc.y]; });
+  const svg = document.getElementById('mapSvg');
+  if (!svg) return;
+  const duration = Math.min(1700, 500 + (pathIds.length - 1) * 200);
+  for (let u = 0; u < count; u++) {
+    const el = document.createElementNS(SVGNS, 'text');
+    el.setAttribute('font-size', '13');
+    el.classList.add('marching-unit');
+    el.textContent = '🪖';
+    el.style.filter = `drop-shadow(0 0 3px ${color})`;
+    svg.appendChild(el);
+    const delay = u * 110;
+    const startTime = performance.now() + delay;
+    (function step(now) {
+      if (now < startTime) { requestAnimationFrame(step); return; }
+      const t = Math.min(1, (now - startTime) / duration);
+      const [x, y] = pointAlongPath(coords, t);
+      el.setAttribute('x', x);
+      el.setAttribute('y', y);
+      const op = t < 0.85 ? 1 : Math.max(0, 1 - (t - 0.85) / 0.15);
+      el.setAttribute('opacity', op);
+      if (t < 1) requestAnimationFrame(step); else el.remove();
+    })(performance.now());
+  }
+}
+
+/* ---------- Tıklama mantığı ----------
+   Bu fonksiyon sadece OYUNU FİİLEN YÜRÜTEN taraf (hotseat modunda herkes,
+   çevrimiçi modda sadece host) tarafından çağrılır. Çevrimiçi modda uzak
+   bir oyuncunun tıklaması önce host'a bir "action" mesajı olarak gider;
+   host bunu (state.selectedUnit'i geçici olarak ayarlayıp) bu fonksiyonla
+   işler ve sonucu herkese yayınlar. Bkz: handleTerritoryClick(). */
+function onTerritoryClick(id) {
+  const p = currentPlayer();
+  const t = state.terr[id];
+
+  if (state.phase === "reinforce") {
+    if (t.owner !== p.id) { log("Bu bölge sana ait değil, takviye fazında sadece kendi bölgene asker koyabilirsin."); return; }
+    const val = UNIT_VALUE[state.selectedUnit];
+    if (val > state.armiesToPlace) {
+      log(`Yeterli asker yok: ${UNIT_NAME[state.selectedUnit]} ${val} asker gerektirir, kalan ${state.armiesToPlace}.`);
+      return;
+    }
+    t.armies += val;
+    state.armiesToPlace -= val;
+    render();
+    return;
+  }
+
+  if (state.phase === "attack") {
+    if (!state.selected) {
+      if (t.owner === p.id && t.armies >= 2) {
+        state.selected = id;
+        render();
+      } else if (t.owner === p.id) {
+        log("Bu bölgede saldıracak kadar asker yok (en az 2 gerekli).");
+      } else {
+        log("Önce saldıracağın kendi bölgeni seç (en az 2 askerli), sonra komşu düşman bölgeye tıkla.");
+      }
+      return;
+    }
+    if (id === state.selected) { state.selected = null; render(); return; }
+    if (t.owner === p.id) {
+      if (t.armies >= 2) { state.selected = id; render(); }
+      else log("Bu bölgede saldıracak kadar asker yok (en az 2 gerekli).");
+      return;
+    }
+    if (!ADJ[state.selected].has(id)) {
+      log("Bu bölge seçili bölgeye komşu değil, saldıramazsın.");
+      return;
+    }
+    if (state.terr[state.selected].armies < 2) {
+      log("Bu bölgede saldıracak yeterli asker kalmadı.");
+      state.selected = null;
+      render();
+      return;
+    }
+    openAttackOverlay(state.selected, id);
+    return;
+  }
+
+  if (state.phase === "fortify") {
+    if (state.fortifyUsed) return;
+    if (!state.selected) {
+      if (t.owner === p.id && t.armies >= 2) { state.selected = id; render(); }
+      return;
+    }
+    if (id === state.selected) { state.selected = null; render(); return; }
+    if (t.owner === p.id && reachableOwnedFrom(state.selected, p.id).has(id)) {
+      openMoveOverlay(state.selected, id);
+    } else if (t.owner === p.id) {
+      log("Bu bölgeye ulaşan, tamamen sana ait bir bölge zinciri yok.");
+      state.selected = id;
+      render();
+    }
+    return;
+  }
+}
+
+// Harita üzerindeki tıklamaların GERÇEK giriş noktası. Hotseat'te veya
+// host'un kendi sırasında doğrudan onTerritoryClick'i çalıştırır; uzak bir
+// çevrimiçi oyuncu iseniz tıklamayı host'a gönderir ve state güncellemesini
+// bekler (bkz. NET bölümü).
+function handleTerritoryClick(id) {
+  if (NET.mode === 'client') {
+    if (!isMyTurn()) return;
+    netSendAction('clickTerritory', { id, unitType: state.selectedUnit });
+    return;
+  }
+  onTerritoryClick(id);
+  if (NET.mode === 'host') netBroadcastState();
+}
+
+/* ---------- Saldırı + zar animasyonu ---------- */
+// Sadece state'i günceller; ekrana yansıtmayı syncOverlaysFromState() yapar
+// (böylece hem host'un kendi tıklaması hem de ağdan gelen bir state
+// güncellemesi aynı kodla doğru şekilde gösterilir).
+function openAttackOverlay(srcId, tgtId) {
+  const src = state.terr[srcId], tgt = state.terr[tgtId];
+  state.pendingAttack = {
+    srcId, tgtId, captured: false,
+    atkDiceCount: Math.min(src.armies - 1, 3),
+    defDiceCount: Math.min(tgt.armies, 2),
+    lastRoll: null,
+  };
+  syncOverlaysFromState();
+}
+
+function renderDicePlaceholders(containerId, n, variantClass) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  el.classList.remove('rolling');
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement('span');
+    d.className = 'die ' + variantClass;
+    d.textContent = '⚀';
+    el.appendChild(d);
+  }
+}
+
+document.getElementById('rollBtn').addEventListener('click', () => {
+  if (NET.mode === 'client') {
+    document.getElementById('rollBtn').disabled = true;
+    document.getElementById('cancelAtkBtn').style.display = 'none';
+    const atkRow = document.getElementById('atkDiceRow'), defRow = document.getElementById('defDiceRow');
+    atkRow.classList.add('rolling'); defRow.classList.add('rolling');
+    const atkEls = [...document.querySelectorAll('#atkDiceRow .die')];
+    const defEls = [...document.querySelectorAll('#defDiceRow .die')];
+    clearInterval(NET.shakeInterval);
+    // Gerçek sonuç host'tan gelene kadar sadece kozmetik/rastgele zar animasyonu
+    NET.shakeInterval = setInterval(() => {
+      atkEls.forEach(el => { el.textContent = diceGlyph(1 + Math.floor(Math.random() * 6)); });
+      defEls.forEach(el => { el.textContent = diceGlyph(1 + Math.floor(Math.random() * 6)); });
+    }, 70);
+    netSendAction('rollDice', {});
+    return;
+  }
+  performRollAnimated();
+});
+
+// Hotseat'te ya da host kendi sırasındayken: zar animasyonunu oynatır,
+// ardından gerçek sonucu hesaplayıp (performRollCore) ekrana yansıtır
+// (revealBattleResult) ve host ise herkese yayınlar.
+function performRollAnimated() {
+  const { srcId, tgtId } = state.pendingAttack;
+  const src = state.terr[srcId], tgt = state.terr[tgtId];
+  const atkDiceCount = Math.min(src.armies - 1, 3);
+  const defDiceCount = Math.min(tgt.armies, 2);
+  const finalAtk = rollDice(atkDiceCount);
+  const finalDef = rollDice(defDiceCount);
+
+  document.getElementById('rollBtn').disabled = true;
+  document.getElementById('cancelAtkBtn').style.display = 'none';
+
+  const atkRow = document.getElementById('atkDiceRow');
+  const defRow = document.getElementById('defDiceRow');
+  atkRow.classList.add('rolling');
+  defRow.classList.add('rolling');
+  const atkEls = document.querySelectorAll('#atkDiceRow .die');
+  const defEls = document.querySelectorAll('#defDiceRow .die');
+  let ticks = 0;
+  const maxTicks = 14;
+  const iv = setInterval(() => {
+    atkEls.forEach(el => { el.textContent = diceGlyph(1 + Math.floor(Math.random() * 6)); });
+    defEls.forEach(el => { el.textContent = diceGlyph(1 + Math.floor(Math.random() * 6)); });
+    ticks++;
+    if (ticks >= maxTicks) {
+      clearInterval(iv);
+      atkRow.classList.remove('rolling');
+      defRow.classList.remove('rolling');
+      const lastRoll = performRollCore(srcId, tgtId, finalAtk, finalDef);
+      revealBattleResult(lastRoll);
+      if (NET.mode === 'host') netBroadcastState();
+    }
+  }, 70);
+}
+
+// Uzak bir oyuncunun saldırısını host adına (animasyonsuz, anında) çözer.
+function hostPerformRemoteRoll() {
+  const { srcId, tgtId } = state.pendingAttack;
+  const src = state.terr[srcId], tgt = state.terr[tgtId];
+  const atkDiceCount = Math.min(src.armies - 1, 3);
+  const defDiceCount = Math.min(tgt.armies, 2);
+  performRollCore(srcId, tgtId, rollDice(atkDiceCount), rollDice(defDiceCount));
+}
+
+// Saf oyun mantığı: zarları uygular, orduları/sahiplikleri günceller, log
+// yazar ve sonucu state.pendingAttack.lastRoll içine kaydeder. DOM'a hiç
+// dokunmaz — bu yüzden hem host'un kendi ekranında hem de (state
+// senkronizasyonu üzerinden) diğer istemcilerde güvenle tekrar okunabilir.
+function performRollCore(srcId, tgtId, atkRolls, defRolls) {
+  const rounds = Math.min(atkRolls.length, defRolls.length);
+  let atkLoss = 0, defLoss = 0;
+  const outcomes = []; // i. tur: true = saldıran kazandı
+  for (let i = 0; i < rounds; i++) {
+    if (atkRolls[i] > defRolls[i]) { defLoss++; outcomes.push(true); }
+    else { atkLoss++; outcomes.push(false); }
+  }
+
+  const p = currentPlayer();
+  const src = state.terr[srcId], tgt = state.terr[tgtId];
+  const defenderPlayer = state.players[tgt.owner];
+  src.armies -= atkLoss;
+  tgt.armies -= defLoss;
+
+  let resultMsg = `Saldıran -${atkLoss} asker, Savunan -${defLoss} asker.`;
+  let captured = false;
+  if (tgt.armies <= 0) {
+    let moveArmies = Math.min(atkRolls.length, src.armies - 1);
+    moveArmies = Math.max(moveArmies, 1);
+    tgt.owner = p.id;
+    tgt.armies = moveArmies;
+    src.armies -= moveArmies;
+    captured = true;
+    state.capturedThisTurn = true;
+    resultMsg += ` 🏳️ ${nameOf(tgtId)} fethedildi! (${moveArmies} asker taşındı)`;
+    if (ownedTerritories(defenderPlayer.id).length === 0) {
+      defenderPlayer.alive = false;
+      resultMsg += ` 💀 ${defenderPlayer.name} elendi.`;
+      if (defenderPlayer.hand.length) {
+        resultMsg += ` (${defenderPlayer.hand.length} kartı ${p.name}'a geçti)`;
+        p.hand.push(...defenderPlayer.hand);
+        defenderPlayer.hand = [];
+      }
+    }
+  }
+
+  log(`⚔️ ${p.name} → ${defenderPlayer.name} (${nameOf(srcId)}→${nameOf(tgtId)}): [${atkRolls.join(',')}] vs [${defRolls.join(',')}] — ${resultMsg}`, captured ? 'win' : null);
+
+  state.pendingAttack.captured = captured;
+  state.pendingAttack.tgtId = tgtId;
+  state.pendingAttack.srcId = srcId;
+  state.pendingAttack.captureColor = p.color;
+  state.pendingAttack.lastRoll = { atkRolls, defRolls, outcomes, resultMsg, captured };
+  return state.pendingAttack.lastRoll;
+}
+
+// Zaten hesaplanmış bir savaş sonucunu (state.pendingAttack.lastRoll) zar
+// kutularına, win/lose sınıflarına ve sonuç metnine yansıtır. Hem host'un
+// kendi animasyonunun sonunda hem de syncOverlaysFromState() içinden çağrılır.
+function revealBattleResult(lastRoll) {
+  const atkEls = document.querySelectorAll('#atkDiceRow .die');
+  const defEls = document.querySelectorAll('#defDiceRow .die');
+  atkEls.forEach((el, i) => {
+    el.classList.remove('win', 'lose');
+    if (i < lastRoll.atkRolls.length) el.textContent = diceGlyph(lastRoll.atkRolls[i]);
+    if (i < lastRoll.outcomes.length) el.classList.add(lastRoll.outcomes[i] ? 'win' : 'lose');
+  });
+  defEls.forEach((el, i) => {
+    el.classList.remove('win', 'lose');
+    if (i < lastRoll.defRolls.length) el.textContent = diceGlyph(lastRoll.defRolls[i]);
+    if (i < lastRoll.outcomes.length) el.classList.add(lastRoll.outcomes[i] ? 'lose' : 'win');
+  });
+  document.getElementById('atkResultText').textContent = lastRoll.resultMsg;
+  document.getElementById('continueBtn').style.display = 'inline-block';
+  document.getElementById('rollBtn').style.display = 'none';
+}
+
+document.getElementById('continueBtn').addEventListener('click', () => {
+  if (NET.mode === 'client') { netSendAction('continueAttack', {}); return; }
+  performContinueAttack();
+});
+
+function performContinueAttack() {
+  document.getElementById('attackOverlay').style.display = 'none';
+  const pa = state.pendingAttack;
+  const src = state.terr[pa.srcId];
+  state.selected = src.armies >= 2 ? pa.srcId : null;
+  state.pendingAttack = null;
+  render();
+
+  const srcT = terrCoord(pa.srcId), tgtT = terrCoord(pa.tgtId);
+  spawnMarchingUnits([pa.srcId, pa.tgtId], pa.captureColor, 3);
+  if (pa.captured) {
+    spawnCaptureEffect(tgtT.x, tgtT.y, pa.captureColor, pa.tgtId);
+  } else {
+    spawnClashEffect(srcT.x, srcT.y, pa.srcId);
+    spawnClashEffect(tgtT.x, tgtT.y, pa.tgtId);
+  }
+  if (NET.mode === 'host') {
+    netBroadcastState({ kind: 'attack', srcId: pa.srcId, tgtId: pa.tgtId, captured: pa.captured, color: pa.captureColor });
+  }
+}
+
+document.getElementById('cancelAtkBtn').addEventListener('click', () => {
+  if (NET.mode === 'client') { netSendAction('cancelAttack', {}); return; }
+  performCancelAttack();
+});
+
+function performCancelAttack() {
+  document.getElementById('attackOverlay').style.display = 'none';
+  state.pendingAttack = null;
+  render();
+  if (NET.mode === 'host') netBroadcastState();
+}
+
+/* ---------- Güçlendirme ---------- */
+function openMoveOverlay(srcId, tgtId) {
+  state.pendingMove = { srcId, tgtId };
+  syncOverlaysFromState();
+}
+
+document.getElementById('moveSlider').oninput = () => {
+  document.getElementById('moveVal').textContent = document.getElementById('moveSlider').value;
+};
+
+document.getElementById('moveConfirm').addEventListener('click', () => {
+  const n = parseInt(document.getElementById('moveSlider').value, 10);
+  if (NET.mode === 'client') { netSendAction('confirmMove', { n }); return; }
+  performConfirmMove(n);
+});
+
+function performConfirmMove(n) {
+  const pm = state.pendingMove;
+  if (!pm) return;
+  const { srcId, tgtId } = pm;
+  const src = state.terr[srcId];
+  const moveColor = currentPlayer().color;
+  const moveOwnerId = currentPlayer().id;
+  src.armies -= n;
+  state.terr[tgtId].armies += n;
+  state.pendingMove = null;
+  state.fortifyUsed = true;
+  state.selected = null;
+  log(`↔️ ${currentPlayer().name}: ${nameOf(srcId)}'dan ${nameOf(tgtId)}'a ${n} asker taşındı (bağlantılı zincir üzerinden).`);
+  render();
+  pulseTerritory(srcId);
+  pulseTerritory(tgtId);
+  const path = findOwnedPath(srcId, tgtId, moveOwnerId) || [srcId, tgtId];
+  spawnMarchingUnits(path, moveColor, 4);
+  if (NET.mode === 'host') {
+    netBroadcastState({ kind: 'move', path, color: moveColor });
+  }
+}
+
+function showVictory(p, viaMission) {
+  if (viaMission) {
+    document.getElementById("victoryText").textContent = `🏆🔒 ${p.name} Enigma görevini tamamlayarak kazandı!`;
+    document.getElementById("victorySub").textContent = `Gizli görev: ${missionText(p)}`;
+  } else {
+    document.getElementById("victoryText").textContent = `🏆 ${p.name} tüm dünyayı fethetti!`;
+    document.getElementById("victorySub").textContent = "";
+  }
+  document.getElementById("victory").style.display = "flex";
+}
+
+/* ---------- Faz butonları ---------- */
+function goToAttack() {
+  state.phase = "attack";
+  state.selected = null;
+  log(`${currentPlayer().name}: saldırı fazı başladı — önce saldıracağın bölgeni seç.`);
+  render();
+}
+
+function goToFortify() {
+  state.phase = "fortify";
+  state.selected = null;
+  log(`${currentPlayer().name}: güçlendirme fazı (isteğe bağlı, tek hamle, bağlantılı zincir üzerinden herhangi bir bölgene).`);
+  render();
+}
+
+function endTurn() {
+  const endingPlayer = currentPlayer();
+  if (state.capturedThisTurn) drawCard(endingPlayer);
+  state.currentIdx = (state.currentIdx + 1) % state.turnOrder.length;
+  let guard = 0;
+  while (!state.players[state.turnOrder[state.currentIdx]].alive && guard < 10) {
+    state.currentIdx = (state.currentIdx + 1) % state.turnOrder.length;
+    guard++;
+  }
+  beginReinforcePhase();
+  render();
+}
+
+/* ============ YAPAY ZEKA RAKİPLER ============
+   Bot oyuncular, onTerritoryClick / performRollCore / performContinueAttack /
+   performConfirmMove / doTrade / endTurn gibi AYNI fonksiyonları kullanır —
+   yani bir insan oyuncunun tıklamasıyla tetiklenen mantığın birebir aynısını
+   programatik olarak tetikler. Sadece hotseat'te (NET.mode==='off') ya da
+   çevrimiçi modda HOST'ta çalışır — host, tüm oyuncuların (dolayısıyla
+   botların da) tek yetkili state sahibidir; salt istemci bir tarayıcı asla
+   bot mantığı çalıştırmaz. */
+let aiTurnRunning = false;
+let aiAttackCount = 0;
+
+function isAIControlled(player) {
+  return !!(player && player.isAI && (NET.mode === 'off' || NET.mode === 'host'));
+}
+
+function maybeRunAITurn() {
+  if (!state || state.gameOver || aiTurnRunning) return;
+  if (!isAIControlled(currentPlayer())) return;
+  aiTurnRunning = true;
+  aiAttackCount = 0;
+  setTimeout(aiTurnStep, 550);
+}
+
+function aiBroadcastIfHost() { if (NET.mode === 'host') netBroadcastState(); }
+
+function aiFindValidCardSet(p) {
+  const hand = p.hand;
+  for (let i = 0; i < hand.length; i++)
+    for (let j = i + 1; j < hand.length; j++)
+      for (let k = j + 1; k < hand.length; k++) {
+        const idxs = [i, j, k];
+        if (isValidSet(idxs.map(x => hand[x]))) return idxs;
+      }
+  return null;
+}
+
+// En çok düşman komşusu olan / en çok tehdit altındaki sınır bölgesini
+// güçlendirmeyi tercih eder.
+function aiPickReinforceTarget(p) {
+  const own = ownedTerritories(p.id);
+  let best = own[0], bestScore = -Infinity;
+  for (const id of own) {
+    const enemyNeighbors = [...ADJ[id]].filter(n => state.terr[n].owner !== p.id);
+    if (enemyNeighbors.length === 0) continue;
+    const enemyArmies = Math.max(...enemyNeighbors.map(n => state.terr[n].armies));
+    const score = enemyNeighbors.length * 10 + enemyArmies - state.terr[id].armies;
+    if (score > bestScore) { bestScore = score; best = id; }
+  }
+  return best;
+}
+
+function aiPickUnitType(armiesToPlace) {
+  if (armiesToPlace >= 10) return 'art';
+  if (armiesToPlace >= 5) return 'cav';
+  return 'inf';
+}
+
+// Belirgin asker üstünlüğü olan bir komşu düşman bölgesi arar (en az %40
+// fazla asker) — yoksa saldırmaz.
+function aiPickAttack(p) {
+  const own = ownedTerritories(p.id).filter(id => state.terr[id].armies >= 3);
+  let best = null, bestRatio = 1.4;
+  for (const src of own) {
+    for (const tgt of ADJ[src]) {
+      if (state.terr[tgt].owner === p.id) continue;
+      const ratio = state.terr[src].armies / state.terr[tgt].armies;
+      if (ratio > bestRatio) { bestRatio = ratio; best = { src, tgt }; }
+    }
+  }
+  return best;
+}
+
+// İç bölgelerden (hiç düşman komşusu olmayan) sınırdaki en zayıf bölgeye
+// asker kaydırmayı dener.
+function aiPickFortify(p) {
+  const own = ownedTerritories(p.id).filter(id => state.terr[id].armies >= 2);
+  const frontier = own.filter(id => [...ADJ[id]].some(n => state.terr[n].owner !== p.id));
+  const interior = own
+    .filter(id => ![...ADJ[id]].some(n => state.terr[n].owner !== p.id) && state.terr[id].armies >= 3)
+    .sort((a, b) => state.terr[b].armies - state.terr[a].armies);
+  if (frontier.length === 0 || interior.length === 0) return null;
+  const weakestFrontier = frontier.reduce((a, b) => state.terr[a].armies <= state.terr[b].armies ? a : b);
+  for (const src of interior) {
+    if (src !== weakestFrontier && reachableOwnedFrom(src, p.id).has(weakestFrontier)) {
+      return { src, tgt: weakestFrontier };
+    }
+  }
+  return null;
+}
+
+function aiTurnStep() {
+  if (!state || state.gameOver) { aiTurnRunning = false; return; }
+  const p = currentPlayer();
+  if (!isAIControlled(p)) { aiTurnRunning = false; return; }
+
+  if (state.phase === "reinforce") {
+    const tradeIdxs = aiFindValidCardSet(p);
+    if (tradeIdxs) {
+      state.selectedCards = tradeIdxs;
+      doTrade();
+      aiBroadcastIfHost();
+      setTimeout(aiTurnStep, 450);
+      return;
+    }
+    if (state.armiesToPlace <= 0) {
+      goToAttack();
+      aiBroadcastIfHost();
+      setTimeout(aiTurnStep, 450);
+      return;
+    }
+    const targetId = aiPickReinforceTarget(p);
+    state.selectedUnit = aiPickUnitType(state.armiesToPlace);
+    onTerritoryClick(targetId);
+    aiBroadcastIfHost();
+    setTimeout(aiTurnStep, 220);
+    return;
+  }
+
+  if (state.phase === "attack") {
+    if (aiAttackCount >= 6) {
+      goToFortify();
+      aiBroadcastIfHost();
+      setTimeout(aiTurnStep, 450);
+      return;
+    }
+    const move = aiPickAttack(p);
+    if (!move) {
+      goToFortify();
+      aiBroadcastIfHost();
+      setTimeout(aiTurnStep, 450);
+      return;
+    }
+    aiAttackCount++;
+    state.selected = null;
+    onTerritoryClick(move.src);
+    onTerritoryClick(move.tgt); // openAttackOverlay -> state.pendingAttack
+    aiBroadcastIfHost();
+    setTimeout(aiResolveAttack, 650);
+    return;
+  }
+
+  if (state.phase === "fortify") {
+    if (!state.fortifyUsed) {
+      const move = aiPickFortify(p);
+      if (move) {
+        onTerritoryClick(move.src);
+        onTerritoryClick(move.tgt); // openMoveOverlay -> state.pendingMove
+        aiBroadcastIfHost();
+        setTimeout(() => {
+          if (!state.pendingMove) { setTimeout(aiTurnStep, 300); return; }
+          const n = Math.max(1, Math.floor((state.terr[move.src].armies - 1) * 0.6));
+          performConfirmMove(n); // kendi içinde (host ise) yayınlıyor
+          setTimeout(aiTurnStep, 450);
+        }, 350);
+        return;
+      }
+    }
+    aiTurnRunning = false;
+    endTurn();
+    aiBroadcastIfHost();
+    return;
+  }
+}
+
+function aiResolveAttack() {
+  if (!state || state.gameOver || !state.pendingAttack) { setTimeout(aiTurnStep, 300); return; }
+  if (!state.pendingAttack.lastRoll) {
+    performRollCore(
+      state.pendingAttack.srcId, state.pendingAttack.tgtId,
+      rollDice(state.pendingAttack.atkDiceCount), rollDice(state.pendingAttack.defDiceCount)
+    );
+    aiBroadcastIfHost();
+  }
+  setTimeout(() => {
+    performContinueAttack(); // kendi içinde (host ise, efektli) yayınlıyor
+    setTimeout(aiTurnStep, 500);
+  }, 550);
+}
+
+/* ---------- Ekran senkronizasyonu (saldırı/taşıma kutuları) ----------
+   state'i (özellikle state.pendingAttack / state.pendingMove) okuyup ilgili
+   kutuları açar/kapatır ve içeriklerini doldurur. Hem yerel bir eylemden
+   hem de ağdan gelen bir state güncellemesinden sonra çağrılabilir — saf
+   biçimde state'e göre DOM üretir, o yüzden tekrar tekrar çağrılması güvenlidir. */
+function isMyTurn() {
+  return NET.mode === 'off' || (state && NET.myPlayerId === currentPlayer().id);
+}
+
+// isMyTurn() sadece "bu ekran kimin sırasını gösteriyor" (çevrimiçi gizlilik
+// için); canAct() ise "bu ekrandaki insan şu an gerçekten tıklayıp hamle
+// yapabilir mi" — bir bot'un sırasında insan arayüzü etkileşimsiz kalır ki
+// botun programatik tıklamalarıyla çakışıp aynı savaşı iki kez uygulama gibi
+// bir yarış durumu (race condition) oluşmasın.
+function canAct() {
+  return isMyTurn() && !isAIControlled(currentPlayer());
+}
+
+function syncOverlaysFromState() {
+  if (!state) return;
+
+  const attackOverlay = document.getElementById('attackOverlay');
+  const showAttack = !!state.pendingAttack && canAct();
+  if (showAttack) {
+    const pa = state.pendingAttack;
+    const src = state.terr[pa.srcId], tgt = state.terr[pa.tgtId];
+    const atkPlayer = currentPlayer();
+    const defPlayer = state.players[tgt.owner];
+    document.getElementById('atkOverlayTitle').textContent = `⚔️ ${nameOf(pa.srcId)} → ${nameOf(pa.tgtId)}`;
+    document.getElementById('atkOverlaySub').textContent =
+      `${atkPlayer.name} (${src.armies} asker) saldırıyor · ${defPlayer.name} (${tgt.armies} asker) savunuyor`;
+    renderDicePlaceholders('atkDiceRow', pa.atkDiceCount, 'atk-die');
+    renderDicePlaceholders('defDiceRow', pa.defDiceCount, 'def-die');
+    if (pa.lastRoll) {
+      revealBattleResult(pa.lastRoll);
+    } else {
+      document.getElementById('atkResultText').textContent = '';
+      document.getElementById('rollBtn').style.display = 'inline-block';
+      document.getElementById('rollBtn').disabled = false;
+      document.getElementById('continueBtn').style.display = 'none';
+      document.getElementById('cancelAtkBtn').style.display = 'inline-block';
+    }
+    attackOverlay.style.display = 'flex';
+  } else {
+    attackOverlay.style.display = 'none';
+  }
+
+  const moveOverlay = document.getElementById('moveOverlay');
+  const showMove = !!state.pendingMove && canAct();
+  if (showMove) {
+    const pm = state.pendingMove;
+    const src = state.terr[pm.srcId];
+    const max = Math.max(1, src.armies - 1);
+    const slider = document.getElementById('moveSlider');
+    const wasOpen = moveOverlay.style.display === 'flex';
+    if (!wasOpen) slider.value = 1;
+    slider.min = 1; slider.max = max;
+    if (parseInt(slider.value, 10) > max) slider.value = max;
+    document.getElementById('moveVal').textContent = slider.value;
+    document.getElementById('moveText').textContent =
+      `${nameOf(pm.srcId)} → ${nameOf(pm.tgtId)}: kaç asker taşınsın? (maks ${max})`;
+    moveOverlay.style.display = 'flex';
+  } else {
+    moveOverlay.style.display = 'none';
+  }
+}
+
+/* ============ ÇEVRİMİÇİ ÇOK OYUNCULU (WebRTC / PeerJS) ============
+   Bu bölüm, tek bir HTML dosyasını gerçek zamanlı çevrimiçi oynanabilir
+   hale getirir. Kendi sunucumuzu barındırmadan çalışır: PeerJS'in herkese
+   açık, ücretsiz "eşleştirme" (signaling) sunucusu üzerinden iki tarayıcı
+   birbirini bulur, ardından oyun verisi doğrudan tarayıcılar arasında
+   (WebRTC) akar. Model "host yetkilidir": oyunu kuran taraf (host) oyunun
+   tek gerçek kopyasını (state) tutar ve her eylemden sonra herkese
+   yayınlar; diğer oyuncuların istemcileri "ince" çalışır — kendi
+   tıklamalarını doğrudan uygulamaz, host'a bir "action" mesajı olarak
+   gönderir ve host'un yayınladığı state'i bekler. Not: bu mekanizma normal
+   internet erişimi olan herhangi bir tarayıcıda çalışır; PeerJS
+   kütüphanesi bir CDN'den yükleniyor, bu yüzden çevrimiçi mod için internet
+   bağlantısı gerekir (aynı ekrandan/hotseat oynamak için gerekmez). */
+const NET = {
+  mode: 'off',          // 'off' | 'host' | 'client'
+  peer: null,
+  conns: {},            // host: {playerId: DataConnection}
+  connPlayerIds: new Map(), // host: DataConnection -> playerId
+  hostConn: null,        // client: host'a giden DataConnection
+  myPlayerId: null,
+  numPlayersExpected: 2,
+  playerNames: [],       // host: katılma sırasına göre isimler (index = playerId)
+  shakeInterval: null,
+};
+let missionRevealedLocal = false; // çevrimiçi modda görev göster/gizle, her istemciye özel
+
+function netAvailable() { return typeof Peer !== 'undefined'; }
+
+function netStatus(msg) {
+  const el = document.getElementById('netStatusMsg');
+  if (el) el.textContent = msg || '';
+}
+
+/* ---- Host tarafı ---- */
+function netCreateHost(name, numPlayers) {
+  if (!netAvailable()) { netStatus('Çevrimiçi mod yüklenemedi (internet bağlantısı gerekiyor). Sayfayı yenileyip tekrar dene.'); return; }
+  NET.mode = 'host';
+  NET.myPlayerId = 0;
+  NET.numPlayersExpected = numPlayers;
+  NET.playerNames = [name];
+  NET.conns = {};
+  NET.connPlayerIds = new Map();
+
+  document.getElementById('hostCreateBtn').disabled = true;
+  document.getElementById('hostLobby').style.display = 'block';
+  document.getElementById('roomCodeText').textContent = 'oluşturuluyor…';
+
+  NET.peer = new Peer();
+  NET.peer.on('open', id => {
+    document.getElementById('roomCodeText').textContent = id;
+    updateHostLobbyUI();
+  });
+  NET.peer.on('connection', conn => {
+    conn.on('data', msg => handleHostIncoming(conn, msg));
+    conn.on('close', () => {
+      const pid = NET.connPlayerIds.get(conn);
+      if (pid !== undefined && state) log(`⚠️ ${state.players[pid].name} bağlantısı koptu.`);
+    });
+  });
+  NET.peer.on('error', e => netStatus('Bağlantı hatası: ' + e.type));
+}
+
+function handleHostIncoming(conn, msg) {
+  if (msg.type === 'join') {
+    if (NET.playerNames.length >= NET.numPlayersExpected) { conn.send({ type: 'full' }); return; }
+    const pid = NET.playerNames.length;
+    NET.playerNames.push((msg.name || ('Oyuncu ' + (pid + 1))).slice(0, 20));
+    NET.conns[pid] = conn;
+    NET.connPlayerIds.set(conn, pid);
+    conn.send({ type: 'assigned', playerId: pid });
+    updateHostLobbyUI();
+    return;
+  }
+  if (msg.type === 'action') {
+    const pid = NET.connPlayerIds.get(conn);
+    if (pid === undefined) return;
+    dispatchHostAction(msg.name, msg.payload || {}, pid);
+  }
+}
+
+function updateHostLobbyUI() {
+  const box = document.getElementById('hostLobbyPlayers');
+  if (box) {
+    box.innerHTML = NET.playerNames.map((n, i) =>
+      `<div class="lobby-row"><span class="dot" style="background:${PLAYER_COLORS[i].color}"></span><span class="civ-badge" title="${CIVILIZATIONS[i % CIVILIZATIONS.length].name}">${CIVILIZATIONS[i % CIVILIZATIONS.length].icon}</span>${n}${i === 0 ? ' (sen, kurucu)' : ''}</div>`
+    ).join('') + (NET.playerNames.length < NET.numPlayersExpected
+      ? `<div class="lobby-row muted">${NET.numPlayersExpected - NET.playerNames.length} oyuncu daha bekleniyor…</div>` : '');
+  }
+  const startBtn = document.getElementById('hostStartBtn');
+  if (startBtn) startBtn.disabled = NET.playerNames.length < NET.numPlayersExpected;
+  Object.values(NET.conns).forEach(c => { try { c.send({ type: 'lobby', names: NET.playerNames }); } catch (e) {} });
+}
+
+// Bir uzak oyuncudan gelen eylemi host adına uygular ve (self-broadcast
+// eden birkaç istisna dışında) sonucu herkese yayınlar. Sadece sırası gelen
+// oyuncunun eylemi kabul edilir — diğerleri sessizce yok sayılır.
+function dispatchHostAction(name, payload, actingPlayerId) {
+  if (!state || state.gameOver) return;
+  if (currentPlayer().id !== actingPlayerId) return;
+  switch (name) {
+    case 'clickTerritory':
+      state.selectedUnit = payload.unitType || state.selectedUnit;
+      onTerritoryClick(payload.id);
+      netBroadcastState();
+      break;
+    case 'rollDice':
+      hostPerformRemoteRoll();
+      netBroadcastState();
+      break;
+    case 'continueAttack':
+      performContinueAttack(); // kendi içinde (efektli) yayınlar
+      break;
+    case 'cancelAttack':
+      performCancelAttack(); // kendi içinde yayınlar
+      break;
+    case 'confirmMove':
+      performConfirmMove(payload.n); // kendi içinde (efektli) yayınlar
+      break;
+    case 'trade':
+      state.selectedCards = payload.cardIndices || [];
+      doTrade();
+      netBroadcastState();
+      break;
+    case 'endTurn':
+      endTurn();
+      netBroadcastState();
+      break;
+    case 'goToAttack':
+      goToAttack();
+      netBroadcastState();
+      break;
+    case 'goToFortify':
+      goToFortify();
+      netBroadcastState();
+      break;
+  }
+}
+
+function netBroadcastState(effect) {
+  if (NET.mode !== 'host' || !state) return;
+  const payload = { type: 'state', state: JSON.parse(JSON.stringify(state)), effect: effect || null };
+  Object.values(NET.conns).forEach(conn => { try { conn.send(payload); } catch (e) {} });
+}
+
+/* ---- İstemci (katılan oyuncu) tarafı ---- */
+function netJoin(name, roomCode) {
+  if (!netAvailable()) { netStatus('Çevrimiçi mod yüklenemedi (internet bağlantısı gerekiyor). Sayfayı yenileyip tekrar dene.'); return; }
+  NET.mode = 'client';
+  document.getElementById('joinBtn').disabled = true;
+  document.getElementById('joinWait').style.display = 'block';
+  document.getElementById('clientWaitText').textContent = 'Bağlanılıyor…';
+
+  NET.peer = new Peer();
+  NET.peer.on('open', () => {
+    const conn = NET.peer.connect(roomCode);
+    NET.hostConn = conn;
+    conn.on('open', () => conn.send({ type: 'join', name }));
+    conn.on('data', msg => handleClientIncoming(msg));
+    conn.on('close', () => { document.getElementById('clientWaitText').textContent = 'Bağlantı koptu.'; });
+    conn.on('error', e => { document.getElementById('clientWaitText').textContent = 'Bağlantı hatası: ' + e.type; });
+  });
+  NET.peer.on('error', e => {
+    netStatus('Bağlantı hatası: ' + e.type);
+    document.getElementById('joinBtn').disabled = false;
+  });
+}
+
+function handleClientIncoming(msg) {
+  if (msg.type === 'assigned') {
+    NET.myPlayerId = msg.playerId;
+    document.getElementById('clientWaitText').textContent = 'Bağlandın! Oda kurucusunun oyunu başlatması bekleniyor…';
+    return;
+  }
+  if (msg.type === 'lobby') {
+    if (NET.myPlayerId !== null) {
+      document.getElementById('clientWaitText').textContent =
+        `Bağlandın (${msg.names.length} oyuncu odada). Oda kurucusunun oyunu başlatması bekleniyor…`;
+    }
+    return;
+  }
+  if (msg.type === 'full') {
+    document.getElementById('clientWaitText').textContent = 'Bu oda dolu.';
+    return;
+  }
+  if (msg.type === 'state') {
+    const wasInSetup = document.getElementById('setup').style.display !== 'none';
+    state = msg.state;
+    if (wasInSetup) {
+      document.getElementById('setup').style.display = 'none';
+      document.getElementById('game').style.display = 'flex';
+    }
+    if (NET.shakeInterval && state.pendingAttack && state.pendingAttack.lastRoll) {
+      clearInterval(NET.shakeInterval);
+      NET.shakeInterval = null;
+      document.getElementById('atkDiceRow').classList.remove('rolling');
+      document.getElementById('defDiceRow').classList.remove('rolling');
+    }
+    render();
+    if (msg.effect) playEffect(msg.effect);
+  }
+}
+
+function netSendAction(name, payload) {
+  if (!NET.hostConn) return;
+  try { NET.hostConn.send({ type: 'action', name, payload }); } catch (e) {}
+}
+
+// Host'tan gelen bir "efekt" açıklamasını (saldırı/taşıma) tüm istemcilerde
+// aynı görsel efektlerle (yürüyen askerler, fetih patlaması, çarpışma
+// kıvılcımı) tekrar oynatır — böylece izleyen herkesin ekranı canlı kalır.
+function playEffect(ev) {
+  if (!ev) return;
+  if (ev.kind === 'attack') {
+    spawnMarchingUnits([ev.srcId, ev.tgtId], ev.color, 3);
+    const srcT = terrCoord(ev.srcId), tgtT = terrCoord(ev.tgtId);
+    if (ev.captured) {
+      spawnCaptureEffect(tgtT.x, tgtT.y, ev.color, ev.tgtId);
+    } else {
+      spawnClashEffect(srcT.x, srcT.y, ev.srcId);
+      spawnClashEffect(tgtT.x, tgtT.y, ev.tgtId);
+    }
+  } else if (ev.kind === 'move') {
+    spawnMarchingUnits(ev.path, ev.color, 4);
+    pulseTerritory(ev.path[0]);
+    pulseTerritory(ev.path[ev.path.length - 1]);
+  }
+}
+
+/* ---------- Kıta gövdesi: dış bükey gövde + pürüzlü kıyı şeridi ---------- */
+function convexHull(points) {
+  const pts = points.slice().sort((a,b) => a[0]-b[0] || a[1]-b[1]);
+  const n = pts.length;
+  if (n < 3) return pts;
+  const cross = (o,a,b) => (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0]);
+  const lower = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper = [];
+  for (let i = n-1; i >= 0; i--) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  upper.pop(); lower.pop();
+  return lower.concat(upper);
+}
+
+function padHull(hull, pad) {
+  const cx = hull.reduce((s,p) => s+p[0], 0) / hull.length;
+  const cy = hull.reduce((s,p) => s+p[1], 0) / hull.length;
+  return hull.map(([x,y]) => {
+    const dx = x - cx, dy = y - cy;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    return [x + dx/len*pad, y + dy/len*pad];
+  });
+}
+
+// Kenarları küçük parçalara bölüp, kenara dik yönde rastgele sapma vererek
+// pürüzlü/girintili-çıkıntılı bir kıyı şeridi izlenimi oluşturur.
+function jitterHull(hull, amp, segs) {
+  const out = [];
+  for (let i = 0; i < hull.length; i++) {
+    const p1 = hull[i], p2 = hull[(i + 1) % hull.length];
+    for (let s = 0; s < segs; s++) {
+      const t = s / segs;
+      const x = p1[0] + (p2[0] - p1[0]) * t;
+      const y = p1[1] + (p2[1] - p1[1]) * t;
+      const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+      const len = Math.sqrt(dx*dx + dy*dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      const j = (Math.random() * 2 - 1) * amp;
+      out.push([x + nx * j, y + ny * j]);
+    }
+  }
+  return out;
+}
+
+function smoothBlobPath(points) {
+  if (points.length < 3) return "";
+  const first = points[0], last = points[points.length - 1];
+  let d = `M ${(first[0]+last[0])/2} ${(first[1]+last[1])/2}`;
+  for (let i = 0; i < points.length; i++) {
+    const p1 = points[i];
+    const p2 = points[(i + 1) % points.length];
+    const mid = [(p1[0]+p2[0])/2, (p1[1]+p2[1])/2];
+    d += ` Q ${p1[0]} ${p1[1]} ${mid[0]} ${mid[1]}`;
+  }
+  return d + " Z";
+}
+
+// Kıta şekilleri bir kez hesaplanıp önbelleğe alınır — her render()'da
+// yeniden rastgele üretilirse kıyı şeridi sürekli titreyip dururdu.
+const CONTINENT_SHAPE_CACHE = {};
+const CONTINENT_HULL_CACHE = {};
+function getContinentHull(code) {
+  if (!CONTINENT_HULL_CACHE[code]) {
+    const pts = TERRITORIES.filter(t => t.cont === code).map(t => [t.x, t.y]);
+    CONTINENT_HULL_CACHE[code] = padHull(convexHull(pts), 38);
+  }
+  return CONTINENT_HULL_CACHE[code];
+}
+function getContinentShapePath(code) {
+  if (!CONTINENT_SHAPE_CACHE[code]) {
+    const hull = getContinentHull(code);
+    const jagged = jitterHull(hull, 13, 3);
+    CONTINENT_SHAPE_CACHE[code] = smoothBlobPath(jagged);
+  }
+  return CONTINENT_SHAPE_CACHE[code];
+}
+
+/* ---------- Bölge çokgenleri: Voronoi (yarı-düzlem kırpma) ---------- */
+// Her bölge merkezine en yakın alanı, sınırlayıcı kutuyu diğer tüm
+// merkezlerin orta-dikme (bisector) doğrularıyla art arda kırparak buluyoruz.
+// Bu, o bölgenin "ülke sınırı" gibi görünen çokgenini verir.
+function clipPolygonByBisector(poly, P, Q) {
+  const nx = Q[0] - P[0], ny = Q[1] - P[1];
+  const mx = (P[0] + Q[0]) / 2, my = (P[1] + Q[1]) / 2;
+  const side = ([x, y]) => (x - mx) * nx + (y - my) * ny;
+  const intersect = (p1, p2) => {
+    const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+    const denom = nx * dx + ny * dy;
+    if (Math.abs(denom) < 1e-9) return p1.slice();
+    const t = (nx * (mx - p1[0]) + ny * (my - p1[1])) / denom;
+    return [p1[0] + dx * t, p1[1] + dy * t];
+  };
+  const out = [];
+  const n = poly.length;
+  for (let i = 0; i < n; i++) {
+    const curr = poly[i], prev = poly[(i - 1 + n) % n];
+    const currIn = side(curr) <= 1e-6, prevIn = side(prev) <= 1e-6;
+    if (currIn) {
+      if (!prevIn) out.push(intersect(prev, curr));
+      out.push(curr);
+    } else if (prevIn) {
+      out.push(intersect(prev, curr));
+    }
+  }
+  return out;
+}
+
+// Dışbükey bir kırpma çokgenine göre konu çokgeni kırpar (Sutherland-Hodgman).
+// Kıta gövdesinin dışına taşan bölge parçalarını keserek adalar/okyanus
+// arasında gerçek bir boşluk bırakır — böylece kıtalar birbirinden ayrı
+// kara parçaları gibi görünür, tüm tuval tek bir mozaik gibi dolmaz.
+function clipPolygonConvex(subject, clip) {
+  let output = subject;
+  const n = clip.length;
+  for (let i = 0; i < n && output.length > 0; i++) {
+    const A = clip[i], B = clip[(i + 1) % n];
+    const edgeCross = (P) => (B[0]-A[0])*(P[1]-A[1]) - (B[1]-A[1])*(P[0]-A[0]);
+    const input = output;
+    output = [];
+    for (let k = 0; k < input.length; k++) {
+      const curr = input[k], prev = input[(k - 1 + input.length) % input.length];
+      const currIn = edgeCross(curr) >= -1e-6, prevIn = edgeCross(prev) >= -1e-6;
+      if (currIn) {
+        if (!prevIn) {
+          const dx = curr[0]-prev[0], dy = curr[1]-prev[1];
+          const denom = (B[0]-A[0])*dy - (B[1]-A[1])*dx;
+          const t = Math.abs(denom) < 1e-9 ? 0 : ((B[0]-A[0])*(prev[1]-A[1]) - (B[1]-A[1])*(prev[0]-A[0])) / -denom;
+          output.push([prev[0] + dx*t, prev[1] + dy*t]);
+        }
+        output.push(curr);
+      } else if (prevIn) {
+        const dx = curr[0]-prev[0], dy = curr[1]-prev[1];
+        const denom = (B[0]-A[0])*dy - (B[1]-A[1])*dx;
+        const t = Math.abs(denom) < 1e-9 ? 0 : ((B[0]-A[0])*(prev[1]-A[1]) - (B[1]-A[1])*(prev[0]-A[0])) / -denom;
+        output.push([prev[0] + dx*t, prev[1] + dy*t]);
+      }
+    }
+  }
+  return output;
+}
+
+function computeVoronoiCells() {
+  const BBOX = [[0, 0], [1000, 0], [1000, 520], [0, 520]];
+  const sites = TERRITORIES.map(t => [t.x, t.y]);
+  const cells = {};
+  TERRITORIES.forEach((t, i) => {
+    let poly = BBOX.map(p => p.slice());
+    for (let j = 0; j < sites.length; j++) {
+      if (j === i) continue;
+      poly = clipPolygonByBisector(poly, sites[i], sites[j]);
+      if (poly.length === 0) break;
+    }
+    if (poly.length > 0) {
+      poly = clipPolygonConvex(poly, getContinentHull(t.cont));
+    }
+    cells[t.id] = poly;
+  });
+  return cells;
+}
+const TERRITORY_CELLS = computeVoronoiCells();
+
+// Çokgeni kendi merkezine doğru biraz küçültür — komşu bölgeler arasında
+// belirgin, "kalın sınır" hissi veren bir boşluk bırakır.
+function shrinkPolygon(poly, amount) {
+  if (poly.length === 0) return poly;
+  const cx = poly.reduce((s, p) => s + p[0], 0) / poly.length;
+  const cy = poly.reduce((s, p) => s + p[1], 0) / poly.length;
+  return poly.map(([x, y]) => {
+    const dx = x - cx, dy = y - cy;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const shrinkBy = Math.min(amount, len * 0.35);
+    return [x - dx / len * shrinkBy, y - dy / len * shrinkBy];
+  });
+}
+
+/* ---------- SVG tanımları: 3D gradyanlar ---------- */
+function buildDefs(svg) {
+  const defs = document.createElementNS(SVGNS, 'defs');
+
+  Object.entries(CONTINENTS).forEach(([code, c]) => {
+    const g = document.createElementNS(SVGNS, 'radialGradient');
+    g.setAttribute('id', `cgrad-${code}`);
+    g.setAttribute('cx', '32%'); g.setAttribute('cy', '28%'); g.setAttribute('r', '80%');
+    const s1 = document.createElementNS(SVGNS, 'stop');
+    s1.setAttribute('offset', '0%'); s1.setAttribute('stop-color', shadeColor(c.color, 0.4)); s1.setAttribute('stop-opacity', '0.55');
+    const s2 = document.createElementNS(SVGNS, 'stop');
+    s2.setAttribute('offset', '65%'); s2.setAttribute('stop-color', c.color); s2.setAttribute('stop-opacity', '0.32');
+    const s3 = document.createElementNS(SVGNS, 'stop');
+    s3.setAttribute('offset', '100%'); s3.setAttribute('stop-color', shadeColor(c.color, -0.3)); s3.setAttribute('stop-opacity', '0.16');
+    g.appendChild(s1); g.appendChild(s2); g.appendChild(s3);
+    defs.appendChild(g);
+  });
+
+  const tokenColors = PLAYER_COLORS.map(p => p.color).concat(['#666666']);
+  tokenColors.forEach((color, idx) => {
+    const id = idx < PLAYER_COLORS.length ? `pgrad-${idx}` : 'pgrad-neutral';
+    const g = document.createElementNS(SVGNS, 'radialGradient');
+    g.setAttribute('id', id);
+    g.setAttribute('cx', '32%'); g.setAttribute('cy', '26%'); g.setAttribute('r', '78%');
+    const s1 = document.createElementNS(SVGNS, 'stop');
+    s1.setAttribute('offset', '0%'); s1.setAttribute('stop-color', shadeColor(color, 0.65));
+    const s2 = document.createElementNS(SVGNS, 'stop');
+    s2.setAttribute('offset', '55%'); s2.setAttribute('stop-color', color);
+    const s3 = document.createElementNS(SVGNS, 'stop');
+    s3.setAttribute('offset', '100%'); s3.setAttribute('stop-color', shadeColor(color, -0.42));
+    g.appendChild(s1); g.appendChild(s2); g.appendChild(s3);
+    defs.appendChild(g);
+  });
+
+  // Bölge yüzeylerine kubbe/cam parlaklığı katan, üstten alta solan beyaz gradyan
+  const gloss = document.createElementNS(SVGNS, 'linearGradient');
+  gloss.setAttribute('id', 'polyGloss');
+  gloss.setAttribute('x1', '0'); gloss.setAttribute('y1', '0');
+  gloss.setAttribute('x2', '0'); gloss.setAttribute('y2', '1');
+  const gs1 = document.createElementNS(SVGNS, 'stop');
+  gs1.setAttribute('offset', '0%'); gs1.setAttribute('stop-color', '#ffffff'); gs1.setAttribute('stop-opacity', '0.30');
+  const gs2 = document.createElementNS(SVGNS, 'stop');
+  gs2.setAttribute('offset', '45%'); gs2.setAttribute('stop-color', '#ffffff'); gs2.setAttribute('stop-opacity', '0.03');
+  const gs3 = document.createElementNS(SVGNS, 'stop');
+  gs3.setAttribute('offset', '100%'); gs3.setAttribute('stop-color', '#000000'); gs3.setAttribute('stop-opacity', '0.22');
+  gloss.appendChild(gs1); gloss.appendChild(gs2); gloss.appendChild(gs3);
+  defs.appendChild(gloss);
+
+  svg.appendChild(defs);
+}
+
+/* ---------- Render ---------- */
+function render() {
+  if (checkAllMissions()) return;
+  if (state.gameOver) {
+    // Bu client'ta oyun bitişi kendi checkAllMissions() çağrısıyla değil,
+    // ağdan zaten "gameOver:true" olarak gelen bir state ile öğrenildiyse
+    // (örn. çevrimiçi modda diğer oyuncular), zafer ekranını burada göster.
+    if (state.winnerInfo && document.getElementById('victory').style.display !== 'flex') {
+      showVictory(state.players[state.winnerInfo.playerId], state.winnerInfo.viaMission);
+    }
+    return;
+  }
+
+  const svg = document.getElementById("mapSvg");
+  svg.innerHTML = "";
+  buildDefs(svg);
+
+  // kıta gövdeleri: pürüzlü kıyı şeridi, sadece dış hat (kalın+parlak) —
+  // bölgelerin kendi rengi artık aşağıdaki çokgenlerden geliyor
+  Object.entries(CONTINENTS).forEach(([code, c]) => {
+    const pts = TERRITORIES.filter(t => t.cont === code).map(t => [t.x, t.y]);
+    const path = document.createElementNS(SVGNS, "path");
+    path.setAttribute("d", getContinentShapePath(code));
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", c.color);
+    path.setAttribute("class", "continent-blob");
+    path.style.filter = `drop-shadow(0 3px 4px rgba(0,0,0,0.55)) drop-shadow(0 0 6px ${c.color})`;
+    svg.appendChild(path);
+
+    const cx = pts.reduce((s,p)=>s+p[0],0) / pts.length;
+    const topY = Math.min(...pts.map(p=>p[1])) - 34;
+    const label = document.createElementNS(SVGNS, "text");
+    label.setAttribute("x", cx); label.setAttribute("y", topY);
+    label.setAttribute("text-anchor","middle");
+    label.setAttribute("fill", c.color);
+    label.setAttribute("class","continent-label");
+    label.textContent = c.name.toUpperCase() + ` (+${c.bonus})`;
+    svg.appendChild(label);
+  });
+
+  const p = currentPlayer();
+
+  // bölge çokgenleri: gerçek "ülke sınırı" gibi kalın çizgilerle ayrılmış,
+  // oyuncu rengiyle dolu alanlar — her biri hafifçe "kabartılmış" (extrude
+  // taban + parlak üst yüzey) görünsün diye 3 katman halinde çiziliyor.
+  TERRITORIES.forEach(t => {
+    const ts = state.terr[t.id];
+    const owner = ts.owner !== null ? state.players[ts.owner] : null;
+    const baseColor = owner ? owner.color : '#555a66';
+    const cell = shrinkPolygon(TERRITORY_CELLS[t.id], 4);
+    if (cell.length < 3) return;
+    const pointsStr = cell.map(pt => pt.join(",")).join(" ");
+
+    // 1) alt taban: rengi koyultulmuş, birkaç piksel aşağı kaydırılmış —
+    //    "kalkık kenar" / ekstrüzyon hissi verir.
+    const base = document.createElementNS(SVGNS, "polygon");
+    const baseCell = cell.map(([x,y]) => [x, y + 4]);
+    base.setAttribute("points", baseCell.map(pt => pt.join(",")).join(" "));
+    base.setAttribute("fill", shadeColor(baseColor, -0.55));
+    base.setAttribute("class", "territory-poly-base");
+    svg.appendChild(base);
+
+    // 2) ana yüzey: oyuncu rengi gradyanı + kalın sınır
+    const poly = document.createElementNS(SVGNS, "polygon");
+    poly.setAttribute("points", pointsStr);
+    poly.setAttribute("fill", owner ? `url(#pgrad-${owner.id})` : "url(#pgrad-neutral)");
+    let pcls = "territory-poly";
+    const pclickable = canAct() && (
+      (state.phase === "reinforce" && ts.owner === p.id) ||
+      (state.phase === "attack") ||
+      (state.phase === "fortify" && !state.fortifyUsed));
+    if (pclickable) pcls += " selectable";
+    if (state.selected === t.id) pcls += " selected";
+    poly.setAttribute("class", pcls);
+    poly.addEventListener("click", () => handleTerritoryClick(t.id));
+    svg.appendChild(poly);
+
+    // 3) cam/parlaklık katmanı: üstten alta solan beyaz gradyan — yüzeye
+    //    hafif bir kubbe/parlaklık hissi katar, tıklamaları etkilemez.
+    const gloss = document.createElementNS(SVGNS, "polygon");
+    gloss.setAttribute("points", pointsStr);
+    gloss.setAttribute("fill", "url(#polyGloss)");
+    gloss.setAttribute("class", "territory-poly-gloss");
+    svg.appendChild(gloss);
+  });
+
+  // bağlantı çizgileri
+  EDGES.forEach(([a,b]) => {
+    const ta = TERRITORIES.find(t=>t.id===a), tb = TERRITORIES.find(t=>t.id===b);
+    const line = document.createElementNS(SVGNS, "line");
+    line.setAttribute("x1", ta.x); line.setAttribute("y1", ta.y);
+    line.setAttribute("x2", tb.x); line.setAttribute("y2", tb.y);
+    line.setAttribute("class","edge-line");
+    svg.appendChild(line);
+  });
+
+  TERRITORIES.forEach(t => {
+    const ts = state.terr[t.id];
+    const owner = ts.owner !== null ? state.players[ts.owner] : null;
+    const comp = decompose(ts.armies);
+    const dominantIcon = comp.art > 0 ? UNIT_ICON.art : (comp.cav > 0 ? UNIT_ICON.cav : UNIT_ICON.inf);
+    const g = document.createElementNS(SVGNS, "g");
+
+    const title = document.createElementNS(SVGNS, "title");
+    title.textContent = `${t.name}: ${ts.armies} asker (${comp.art} topçu, ${comp.cav} süvari, ${comp.inf} piyade)`;
+    g.appendChild(title);
+
+    const circle = document.createElementNS(SVGNS, "circle");
+    circle.setAttribute("cx", t.x); circle.setAttribute("cy", t.y); circle.setAttribute("r", 16);
+    circle.setAttribute("fill", owner ? `url(#pgrad-${owner.id})` : "url(#pgrad-neutral)");
+    circle.setAttribute("stroke", "#0b0f18");
+    circle.setAttribute("data-id", t.id);
+    let cls = "territory-circle";
+    const clickable = canAct() && (
+      (state.phase === "reinforce" && ts.owner === p.id) ||
+      (state.phase === "attack") ||
+      (state.phase === "fortify" && !state.fortifyUsed));
+    if (clickable) cls += " selectable";
+    if (state.selected === t.id) cls += " selected";
+    circle.setAttribute("class", cls);
+    circle.addEventListener("click", () => handleTerritoryClick(t.id));
+    g.appendChild(circle);
+
+    // parlaklık noktası (3D cam/top hissi için)
+    const shine = document.createElementNS(SVGNS, "ellipse");
+    shine.setAttribute("cx", t.x - 5); shine.setAttribute("cy", t.y - 6);
+    shine.setAttribute("rx", 5); shine.setAttribute("ry", 3);
+    shine.setAttribute("fill", "rgba(255,255,255,0.5)");
+    shine.setAttribute("class", "territory-shine");
+    g.appendChild(shine);
+
+    const icon = document.createElementNS(SVGNS, "text");
+    icon.setAttribute("x", t.x); icon.setAttribute("y", t.y - 3);
+    icon.setAttribute("class","territory-icon");
+    icon.textContent = dominantIcon;
+    g.appendChild(icon);
+
+    const count = document.createElementNS(SVGNS, "text");
+    count.setAttribute("x", t.x); count.setAttribute("y", t.y + 10);
+    count.setAttribute("class","territory-count");
+    count.textContent = ts.armies;
+    g.appendChild(count);
+
+    // ülke/bölge adı etiketi — dairenin hemen üstünde, haritayı gerçek bir
+    // harita gibi okunaklı kılar.
+    const label = document.createElementNS(SVGNS, "text");
+    label.setAttribute("x", t.x); label.setAttribute("y", t.y - 22);
+    label.setAttribute("class", "territory-label");
+    label.textContent = t.label || t.name;
+    g.appendChild(label);
+
+    svg.appendChild(g);
+  });
+
+  const myTurnNow = canAct();
+  // Çevrimiçi modda bu ekran hep "sırası gelen oyuncuyu" değil, kendi
+  // oyuncumuzu (viewer) esas almalı — aksi halde başkasının gizli görevini/
+  // elindeki kartları görmüş oluruz.
+  const viewer = NET.mode === 'off' ? p : state.players[NET.myPlayerId];
+
+  document.getElementById("turnDot").style.background = p.color;
+  const civTag = p.civ ? ` ${p.civ.icon} ${p.civ.name}` : '';
+  document.getElementById("turnName").textContent = p.name + civTag + (NET.mode !== 'off' ? (myTurnNow ? ' (Sen)' : '') : '');
+  const phaseNames = {reinforce:"Takviye Fazı", attack:"Saldırı Fazı", fortify:"Güçlendirme Fazı"};
+  document.getElementById("turnPhase").textContent = phaseNames[state.phase];
+
+  let hint = "";
+  if (!myTurnNow) {
+    hint = `${p.name} oynuyor — sırasını bekliyorsun.`;
+  } else {
+    if (state.phase === "reinforce") hint = `Yerleştirilecek: ${state.armiesToPlace} asker. Bir birim türü seç, kendi bölgene tıkla.`;
+    if (state.phase === "attack") hint = state.selected
+      ? `Saldırgan: ${nameOf(state.selected)}. Komşu düşman bölgeye tıkla.`
+      : `Saldırmak için (2+ asker olan) kendi bölgene tıkla, sonra komşu düşman bölgeye tıkla.`;
+    if (state.phase === "fortify") hint = state.fortifyUsed
+      ? "Bu tur güçlendirme kullanıldı."
+      : (state.selected ? `${nameOf(state.selected)} seçili. Bağlantılı (aradaki bölgeler de senin olan) herhangi bir bölgene tıkla.` : "İstersen bir bölgenden, sana ait bölgelerden oluşan bir zincirle bağlı herhangi bir bölgene asker taşı.");
+  }
+  document.getElementById("turnHint").textContent = hint;
+
+  // Enigma görev paneli — her zaman viewer'ın (bu ekranın sahibi olan
+  // oyuncunun) kendi görevini gösterir, sırası kimde olursa olsun.
+  const missionTextEl = document.getElementById("missionText");
+  const revealed = NET.mode === 'off' ? state.missionRevealed : missionRevealedLocal;
+  missionTextEl.textContent = revealed ? missionText(viewer) : "Görmek için 'Göster'e tıkla — sadece sen görmelisin.";
+  missionTextEl.classList.toggle("masked", !revealed);
+  document.getElementById("missionToggle").textContent = revealed ? "Gizle" : "Göster";
+
+  // birim paneli
+  const unitPanel = document.getElementById("unitPanel");
+  unitPanel.style.display = (state.phase === "reinforce" && myTurnNow) ? "block" : "none";
+  ["inf","cav","art"].forEach(u => {
+    const btn = document.getElementById("unit" + u.charAt(0).toUpperCase() + u.slice(1));
+    btn.classList.toggle("selected", state.selectedUnit === u);
+    btn.disabled = UNIT_VALUE[u] > state.armiesToPlace;
+  });
+
+  // faz butonları
+  const btnRow = document.getElementById("phaseButtons");
+  btnRow.innerHTML = "";
+  if (myTurnNow) {
+    if (state.phase === "reinforce" && state.armiesToPlace <= 0) {
+      const b0 = document.createElement("button");
+      b0.className = "btn primary"; b0.textContent = "Saldırı Fazına Geç →";
+      b0.onclick = () => { if (NET.mode === 'client') netSendAction('goToAttack', {}); else { goToAttack(); if (NET.mode === 'host') netBroadcastState(); } };
+      btnRow.appendChild(b0);
+    }
+    if (state.phase === "attack") {
+      const b1 = document.createElement("button");
+      b1.className = "btn primary"; b1.textContent = "Güçlendirme Fazına Geç";
+      b1.onclick = () => { if (NET.mode === 'client') netSendAction('goToFortify', {}); else { goToFortify(); if (NET.mode === 'host') netBroadcastState(); } };
+      btnRow.appendChild(b1);
+    }
+    const endBtn = document.createElement("button");
+    endBtn.className = "btn"; endBtn.textContent = "Sırayı Bitir";
+    endBtn.disabled = state.phase === "reinforce" && state.armiesToPlace > 0;
+    endBtn.onclick = () => { if (NET.mode === 'client') netSendAction('endTurn', {}); else { endTurn(); if (NET.mode === 'host') netBroadcastState(); } };
+    btnRow.appendChild(endBtn);
+  }
+
+  // kartlar — viewer'ın kendi eli gösterilir; sadece kendi sıramızda takas edilebilir
+  const canInteractCards = myTurnNow;
+  const cardList = document.getElementById("cardList");
+  cardList.innerHTML = "";
+  viewer.hand.forEach((card, idx) => {
+    const chip = document.createElement("div");
+    const sel = canInteractCards && state.selectedCards.includes(idx);
+    chip.className = "card-chip" + (sel ? " selected" : "");
+    const label = card.territory ? nameOf(card.territory) : "Joker";
+    chip.innerHTML = `<span>${CARD_ICON[card.type]}</span><span>${label}</span>`;
+    if (canInteractCards) chip.onclick = () => toggleCardSelect(idx);
+    cardList.appendChild(chip);
+  });
+  document.getElementById("cardCount").textContent = `${viewer.hand.length} kart`;
+  const selectedCardObjs = canInteractCards ? state.selectedCards.map(i => viewer.hand[i]).filter(Boolean) : [];
+  const canTrade = canInteractCards && state.phase === "reinforce" && selectedCardObjs.length === 3 && isValidSet(selectedCardObjs);
+  document.getElementById("tradeBtn").disabled = !canTrade;
+  document.getElementById("tradeValueHint").textContent =
+    `Sıradaki takas bonusu: +${tradeValue(state.cardTradeCount)} asker (3 aynı ya da 3 farklı türde kart seç)`;
+
+  // oyuncular
+  const playersDiv = document.getElementById("players");
+  playersDiv.innerHTML = "";
+  state.players.forEach(pl => {
+    const row = document.createElement("div");
+    row.className = "p-row" + (pl.alive ? "" : " dead");
+    const civBadge = pl.civ ? `<span class="civ-badge" title="${pl.civ.name}">${pl.civ.icon}</span>` : '';
+    row.innerHTML = `<span class="dot" style="background:${pl.color}"></span>${civBadge}${pl.name}<span class="terr-count">${ownedTerritories(pl.id).length} bölge · ${pl.hand.length} kart</span>`;
+    playersDiv.appendChild(row);
+  });
+
+  renderLog();
+  syncOverlaysFromState();
+  maybeRunAITurn();
+}
+
+document.getElementById("tradeBtn").addEventListener("click", () => {
+  if (NET.mode === 'client') { netSendAction('trade', { cardIndices: state.selectedCards.slice() }); return; }
+  doTrade();
+  if (NET.mode === 'host') netBroadcastState();
+});
+document.getElementById("missionToggle").addEventListener("click", () => {
+  if (NET.mode === 'off') { state.missionRevealed = !state.missionRevealed; }
+  else { missionRevealedLocal = !missionRevealedLocal; }
+  render();
+});
+document.querySelectorAll(".unit-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (btn.disabled) return;
+    state.selectedUnit = btn.dataset.u;
+    render();
+  });
+});
+
+/* ---------- Setup ekranı: hotseat ---------- */
+let chosenN = 2;
+document.querySelectorAll("#pcRow .pc-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#pcRow .pc-btn").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    chosenN = parseInt(btn.dataset.n, 10);
+  });
+});
+document.querySelector('#pcRow .pc-btn[data-n="2"]').classList.add("selected");
+
+document.getElementById("startBtn").addEventListener("click", () => {
+  document.getElementById("setup").style.display = "none";
+  document.getElementById("game").style.display = "flex";
+  const vsAI = document.getElementById("aiToggle").checked;
+  initGame(chosenN, null, vsAI);
+});
+
+/* ---------- Setup ekranı: mod sekmeleri (hotseat / oda kur / odaya katıl) ---------- */
+document.querySelectorAll(".mode-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".mode-tab").forEach(t => t.classList.remove("selected"));
+    tab.classList.add("selected");
+    netStatus("");
+    ["hotseat", "host", "join"].forEach(m => {
+      document.getElementById(m + "Panel").style.display = (m === tab.dataset.mode) ? "block" : "none";
+    });
+  });
+});
+
+/* ---------- Setup ekranı: çevrimiçi oda kur (host) ---------- */
+let hostChosenN = 2;
+document.querySelectorAll("#hostPcRow .pc-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#hostPcRow .pc-btn").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    hostChosenN = parseInt(btn.dataset.n, 10);
+  });
+});
+document.querySelector('#hostPcRow .pc-btn[data-n="2"]').classList.add("selected");
+
+document.getElementById("hostCreateBtn").addEventListener("click", () => {
+  const name = (document.getElementById("hostNameInput").value || "Kurucu").trim().slice(0, 20) || "Kurucu";
+  netCreateHost(name, hostChosenN);
+});
+
+document.getElementById("hostStartBtn").addEventListener("click", () => {
+  if (NET.playerNames.length < NET.numPlayersExpected) return;
+  initGame(NET.numPlayersExpected, NET.playerNames);
+  document.getElementById("setup").style.display = "none";
+  document.getElementById("game").style.display = "flex";
+  netBroadcastState();
+});
+
+document.getElementById("copyRoomCodeBtn").addEventListener("click", () => {
+  const code = document.getElementById("roomCodeText").textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(code).catch(() => {});
+});
+
+// Davet linki: bu sayfa bir web adresinde barındırılıyorsa (file:// değil,
+// http(s):// ise), oda koduyla birlikte tek tıkla katılınabilecek bir link
+// üretir. Arkadaşlar bu linke tıklayınca otomatik olarak "Odaya Katıl"
+// sekmesine düşer ve kod zaten dolu gelir — sadece isimlerini yazıp
+// "Katıl"a basmaları yeterli olur.
+document.getElementById("copyInviteLinkBtn").addEventListener("click", () => {
+  const code = document.getElementById("roomCodeText").textContent;
+  const base = location.href.split("?")[0];
+  const link = base + "?room=" + encodeURIComponent(code);
+  if (navigator.clipboard) navigator.clipboard.writeText(link).catch(() => {});
+  netStatus(location.protocol === "file:"
+    ? "Not: bu dosya bir web adresinde barındırılmadığı için link sadece dosyayı zaten açmış birinde işe yarar. Herkesin tek tıkla katılabilmesi için dosyayı bir web adresine yerleştirmemi isteyebilirsin."
+    : "Davet linki kopyalandı.");
+});
+
+/* ---------- Setup ekranı: çevrimiçi odaya katıl (join) ---------- */
+document.getElementById("joinBtn").addEventListener("click", () => {
+  const name = (document.getElementById("joinNameInput").value || "Oyuncu").trim().slice(0, 20) || "Oyuncu";
+  const code = document.getElementById("joinCodeInput").value.trim();
+  if (!code) { netStatus("Önce oda kodunu gir."); return; }
+  netJoin(name, code);
+});
+
+// URL'de ?room=KOD varsa (bir davet linkinden gelindiyse), doğrudan
+// "Odaya Katıl" sekmesine geç ve kodu otomatik doldur.
+(function autoFillRoomFromURL() {
+  const params = new URLSearchParams(location.search);
+  const room = params.get("room");
+  if (!room) return;
+  document.querySelectorAll(".mode-tab").forEach(t => t.classList.remove("selected"));
+  document.querySelector('.mode-tab[data-mode="join"]').classList.add("selected");
+  ["hotseat", "host", "join"].forEach(m => {
+    document.getElementById(m + "Panel").style.display = (m === "join") ? "block" : "none";
+  });
+  document.getElementById("joinCodeInput").value = room;
+})();
+</script>
+</body>
+</html>

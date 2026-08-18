@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.Fetih" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">#04060c</item>
+        <item name="android:windowBackground">#04060c</item>
+    </style>
+</resources>
